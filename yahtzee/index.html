@@ -31,24 +31,27 @@
 
         <!-- GAME SCREEN -->
         <div id="gameScreen" class="screen hidden">
-            <!-- Left Panel: Controls -->
+            <!-- Controls Bar (Top on Tablet) -->
             <div class="game-controls-area">
-                <div class="turn-indicator" id="turnIndicator">Player 1</div>
-                <div id="message" class="message">Roll the dice to start!</div>
+                <div class="turn-status-group">
+                    <div class="turn-indicator" id="turnIndicator">Player 1</div>
+                    <div id="message" class="message">Roll the dice to start!</div>
+                </div>
                 
                 <div class="dice-container" id="diceContainer">
                     <!-- JS renders dice here -->
                 </div>
 
-                <button id="rollBtn" class="btn">ROLL (3)</button>
-                
-                <div id="gameOverControls" class="hidden" style="margin-top: 20px;">
-                    <button id="playAgainBtn" class="btn" style="margin-bottom: 10px;">Play Again</button>
-                    <button id="newGroupBtn" class="btn btn-secondary">New Group</button>
+                <div class="action-group">
+                    <button id="rollBtn" class="btn">ROLL (3)</button>
+                    <div id="gameOverControls" class="hidden">
+                        <button id="playAgainBtn" class="btn">Play Again</button>
+                        <button id="newGroupBtn" class="btn btn-secondary" style="margin-top:5px">Exit</button>
+                    </div>
                 </div>
             </div>
 
-            <!-- Right Panel: Scorecard -->
+            <!-- Scorecard (Fills rest) -->
             <div class="table-container">
                 <table id="scoreTable">
                     <thead>

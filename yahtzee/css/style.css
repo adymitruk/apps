@@ -255,58 +255,76 @@ input:focus { border-color: var(--primary-color); }
 }
 
 /* Desktop/Tablet Grid */
-@media (min-width: 700px) { /* Lower threshold to catch foldables */
+@media (min-width: 700px) {
     #gameScreen {
-        display: grid;
-        grid-template-columns: 40fr 60fr; /* Give table more space */
-        grid-template-rows: 1fr;
-        align-items: stretch;
+        display: flex; /* Stack vertically instead of grid columns */
+        flex-direction: column;
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .game-controls-area {
+        order: -1; /* Ensure controls are at the top */
+        display: flex;
+        flex-direction: row; /* Horizontal controls bar */
+        align-items: center;
+        justify-content: space-between;
+        padding: 15px 20px;
         gap: 20px;
+        flex-shrink: 0; /* Don't shrink */
+        border-bottom: 2px solid var(--border-color); /* Separation */
+    }
+
+    /* Layout inside the top control bar */
+    .dice-container {
+        margin: 0;
+        order: 2; /* Dice in middle */
     }
     
-    .game-controls-area {
-        height: 100%;
+    .turn-status-group {
         display: flex;
         flex-direction: column;
-        justify-content: space-between; /* Spread content out to fill height */
-        padding: 40px 20px; /* More padding */
-    }
-    
-    /* Spacer helpers to distribute if needed, or just let flex do it */
-    .turn-indicator { 
-        align-self: center; 
-        font-size: 1.3rem; 
-        padding: 10px 24px;
-        margin-bottom: auto; /* Push to top */
-    }
-    
-    .dice-container {
-        margin: auto 0; /* Center in middle space */
-        gap: 15px;
+        align-items: flex-start;
+        order: 1; /* Left side */
+        min-width: 150px;
     }
 
-    .die { width: 70px; height: 70px; } /* Large but fit 5 */
-    .die-arrow { font-size: 24px; padding: 10px; opacity: 0.5; }
-    
-    .message {
-        font-size: 1.4rem;
-        margin: 20px 0;
+    .action-group {
+        order: 3; /* Right side */
+        min-width: 150px;
+        text-align: right;
     }
 
+    /* Element Styling adjustments for the bar */
+    .turn-indicator { margin: 0 0 5px 0; font-size: 1rem; }
+    .message { margin: 0; font-size: 1rem; text-align: left; }
+    
     .btn { 
-        font-size: 20px; 
-        padding: 20px; 
-        margin-top: auto; /* Push to bottom */
+        width: auto; 
+        padding: 12px 30px; 
+        margin: 0; 
+        font-size: 18px;
+    }
+
+    .die { width: 60px; height: 60px; }
+    .die-arrow { font-size: 18px; padding: 5px; }
+
+    /* Score Table fills the rest */
+    .table-container {
+        flex: 1;
+        border-radius: 0 0 var(--radius) var(--radius);
+        box-shadow: none;
+        border-top: none;
     }
     
-    th, td {
-        font-size: 18px; /* Bigger table text */
-        padding: 14px;
-    }
-    th:first-child, td:first-child {
-        font-size: 18px;
-        min-width: 140px;
-    }
+    /* Table font sizing */
+    th, td { padding: 12px; font-size: 16px; }
+}
+
+/* Adjust Setup Screen centering too */
+.setup-card {
+    justify-content: center; /* Pack to center, don't spread */
+    gap: 25px;
 }
 
 .game-controls-area {
