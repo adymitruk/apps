@@ -42,7 +42,8 @@ const CATEGORIES = [
     { key: 'yahtzee', label: 'Yahtzee' },
     { key: 'chance', label: 'Chance' },
     { key: 'lowerTotal', label: 'Lower Total', type: 'calc' },
-    { key: 'grandTotal', label: 'GRAND TOTAL', type: 'calc', isHeader: true }
+    { key: 'grandTotal', label: 'GRAND TOTAL', type: 'calc', isHeader: true },
+    { key: 'seriesTotal', label: 'Series Total', type: 'calc', isHeader: true } // New Row
 ];
 
 const SCORABLE_CATS = CATEGORIES.filter(c => !c.type).map(c => c.key);
@@ -50,7 +51,7 @@ const SCORABLE_CATS = CATEGORIES.filter(c => !c.type).map(c => c.key);
 let appState = {
     players: [],
     currentPlayerIndex: 0,
-    dice: [0, 0, 0, 0, 0],
+    dice: [0, 0, 0, 0, 0], // 0 means uninitialized/empty, but for manual mode we might want default 1?
     rollsLeft: 3,
     held: [false, false, false, false, false],
     gameOver: false
@@ -82,10 +83,77 @@ const DOT_MAP = {
     6: [0, 2, 3, 5, 6, 8]
 };
 
+// --- Input Handling (Drag/Arrows) ---
+let dragStartY = 0;
+let isDragging = false;
+let activeDieIndex = -1;
+
+function handlePointerDown(e, index) {
+    if (appState.held[index] || appState.gameOver) return;
+    // Only allow drag if we have dice (or permit setting initial dice manually)
+    // If dice are 0 (start of turn), we allow setting them to 1 first? 
+    // Let's assume dice must have value > 0 to drag, or we init them.
+    
+    isDragging = true;
+    dragStartY = e.clientY;
+    activeDieIndex = index;
+    
+    e.target.setPointerCapture(e.pointerId);
+}
+
+function handlePointerMove(e) {
+    if (!isDragging || activeDieIndex === -1) return;
+    
+    const deltaY = dragStartY - e.clientY; // Up is positive
+    const threshold = 30; // pixels to trigger change
+
+    if (Math.abs(deltaY) > threshold) {
+        const change = deltaY > 0 ? 1 : -1;
+        changeDieValue(activeDieIndex, change);
+        dragStartY = e.clientY; // Reset anchor
+    }
+}
+
+function handlePointerUp(e) {
+    isDragging = false;
+    activeDieIndex = -1;
+}
+
+function changeDieValue(index, delta) {
+    if (appState.held[index] || appState.gameOver) return;
+    
+    let newVal = (appState.dice[index] || 1) + delta;
+    if (newVal > 6) newVal = 1;
+    if (newVal < 1) newVal = 6;
+    
+    appState.dice[index] = newVal;
+    
+    // If we manually change dice, we are technically "using" the turn logic, 
+    // but the user wants to mirror IRL play. 
+    // We update the UI immediately.
+    renderGame();
+}
+
 function renderDie(val, i, isHeld) {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'die-wrapper';
+
+    // Up Arrow
+    const upBtn = document.createElement('div');
+    upBtn.className = 'die-arrow arrow-up';
+    upBtn.innerHTML = '▲';
+    upBtn.onclick = (e) => { e.stopPropagation(); changeDieValue(i, 1); };
+
+    // Die
     const d = document.createElement('div');
     d.className = 'die' + (isHeld ? ' held' : '');
     d.onclick = () => toggleHold(i);
+    
+    // Pointer Events for Drag
+    d.onpointerdown = (e) => handlePointerDown(e, i);
+    d.onpointermove = handlePointerMove;
+    d.onpointerup = handlePointerUp;
+    d.onpointercancel = handlePointerUp; // Safety
     
     // Create 9 dots
     for (let dotIdx = 0; dotIdx < 9; dotIdx++) {
@@ -96,10 +164,32 @@ function renderDie(val, i, isHeld) {
         }
         d.appendChild(dot);
     }
-    return d;
+
+    // Down Arrow
+    const downBtn = document.createElement('div');
+    downBtn.className = 'die-arrow arrow-down';
+    downBtn.innerHTML = '▼';
+    downBtn.onclick = (e) => { e.stopPropagation(); changeDieValue(i, -1); };
+
+    // If held or game over, hide arrows/disable drag visuals (optional, but requested behavior is 'frozen dice can't be changed')
+    if (isHeld || appState.gameOver) {
+        upBtn.style.opacity = '0';
+        downBtn.style.opacity = '0';
+        upBtn.style.pointerEvents = 'none';
+        downBtn.style.pointerEvents = 'none';
+        d.style.cursor = 'default';
+    } else {
+        d.style.touchAction = 'none'; // Prevent scroll while dragging die
+    }
+
+    wrapper.appendChild(upBtn);
+    wrapper.appendChild(d);
+    wrapper.appendChild(downBtn);
+    
+    return wrapper;
 }
 
-// --- Logic (Same as before) ---
+// --- Logic ---
 
 function calculateScore(category, dice) {
     const counts = {};
@@ -147,6 +237,9 @@ function updatePlayerTotals(player) {
     });
     player.scores.lowerTotal = lower;
     player.scores.grandTotal = player.scores.upperTotal + lower;
+    
+    // Series Total = Previous wins/accumulated + current Grand Total
+    player.scores.seriesTotal = (player.seriesBase || 0) + player.scores.grandTotal;
 }
 
 // --- Actions ---
@@ -154,7 +247,8 @@ function updatePlayerTotals(player) {
 function addPlayer() {
     const name = playerNameInput.value.trim();
     if (name) {
-        appState.players.push({ name, scores: {} });
+        // seriesBase tracks locked-in scores from previous games
+        appState.players.push({ name, scores: {}, seriesBase: 0 });
         playerNameInput.value = '';
         renderSetup();
     }
@@ -186,11 +280,13 @@ function startGame() {
 }
 
 function quickStart() {
-    appState.players = [{ name: 'Player 1', scores: {} }];
+    appState.players = [{ name: 'Player 1', scores: {}, seriesBase: 0 }];
     startGame();
 }
 
 function resetTurn() {
+    // If resetting turn, reset dice to 0? Or keep them? 
+    // Standard game: dice clear.
     appState.dice = [0, 0, 0, 0, 0];
     appState.rollsLeft = 3;
     appState.held = [false, false, false, false, false];
@@ -214,7 +310,7 @@ function roll() {
             }
             appState.rollsLeft--;
             renderGame();
-        }, 150); // Slight delay for animation feel
+        }, 150); 
     }
 }
 
@@ -228,7 +324,12 @@ function toggleHold(index) {
 function selectCategory(cat, playerIndex) {
     if (appState.gameOver) return;
     if (playerIndex !== appState.currentPlayerIndex) return;
-    if (appState.rollsLeft === 3 && appState.dice[0] === 0) return;
+    
+    // Allow scoring if dice are manually set even if rollsLeft == 3?
+    // User requirement: "game becomes a scoresheet". 
+    // So we should relax the "must roll" constraint if dice have values > 0.
+    const diceSum = appState.dice.reduce((a,b) => a+b, 0);
+    if (diceSum === 0) return; 
 
     const player = appState.players[playerIndex];
     if (player.scores[cat] !== undefined) return;
@@ -251,13 +352,20 @@ function selectCategory(cat, playerIndex) {
 }
 
 function playAgain() {
-    appState.players.forEach(p => p.scores = {});
+    // Accumulate scores into seriesBase
+    appState.players.forEach(p => {
+        p.seriesBase = (p.seriesBase || 0) + (p.scores.grandTotal || 0);
+        p.scores = {};
+        // Init the new series total for display immediately
+        p.scores.seriesTotal = p.seriesBase;
+    });
+    
     appState.gameOver = false;
     appState.currentPlayerIndex = 0;
     resetTurn();
     buildScoreTable();
     gameOverControls.classList.add('hidden');
-    rollBtn.classList.remove('hidden'); // Show roll button again
+    rollBtn.classList.remove('hidden'); 
     renderGame();
 }
 
@@ -323,13 +431,14 @@ function renderGame() {
         turnIndicator.textContent = "GAME OVER";
         turnIndicator.style.background = "var(--accent-color)";
         msgEl.textContent = "Check totals below!";
-        rollBtn.classList.add('hidden'); // Hide roll button
+        rollBtn.classList.add('hidden'); 
         gameOverControls.classList.remove('hidden');
     } else {
         turnIndicator.textContent = `${currentPlayer.name}'s Turn`;
         turnIndicator.style.background = "var(--text-color)";
         
-        if (appState.rollsLeft === 3) msgEl.textContent = "Roll to start";
+        // Update message for flexibility
+        if (appState.rollsLeft === 3 && appState.dice[0] === 0) msgEl.textContent = "Roll or set dice";
         else if (appState.rollsLeft === 0) msgEl.textContent = "Select category";
         else msgEl.textContent = `${appState.rollsLeft} rolls left`;
         
@@ -361,7 +470,15 @@ function renderGame() {
             const isMyTurn = (pIdx === appState.currentPlayerIndex) && !appState.gameOver;
             
             td.textContent = (val !== undefined) ? val : '';
-            if (catDef.type === 'calc' && val !== undefined) td.style.fontWeight = 'bold';
+            if (catDef.type === 'calc') {
+                // If it's the new Series Total row, show seriesTotal property
+                if (catDef.key === 'seriesTotal') {
+                     // Default to seriesBase if current game score is 0/undefined
+                     const total = p.scores.seriesTotal !== undefined ? p.scores.seriesTotal : (p.seriesBase || 0);
+                     td.textContent = total;
+                }
+                td.style.fontWeight = 'bold';
+            }
 
             if (isMyTurn && !appState.gameOver) {
                  td.classList.add('current-player-col');
@@ -373,9 +490,9 @@ function renderGame() {
                 if (val !== undefined) {
                     td.classList.add('filled');
                     td.classList.remove('active-turn');
-                } else if (isMyTurn && appState.rollsLeft < 3) {
-                    td.classList.add('active-turn');
-                    // Preview score potential could go here
+                } else if (isMyTurn) {
+                    // Always active if it's my turn, even if I haven't rolled yet (manual entry support)
+                     td.classList.add('active-turn');
                 } else {
                     td.classList.remove('active-turn');
                 }

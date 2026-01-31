@@ -213,6 +213,34 @@ input:focus { border-color: var(--primary-color); }
     perspective: 1000px;
 }
 
+/* Die Wrapper to hold arrows */
+.die-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+}
+
+.die-arrow {
+    font-size: 12px;
+    color: var(--text-secondary);
+    cursor: pointer;
+    opacity: 0; /* Hidden by default, show on hover or always? */
+    transition: opacity 0.2s;
+    user-select: none;
+    padding: 2px;
+}
+/* Show arrows on hover of the wrapper, OR always visible on touch? 
+   Let's make them visible always for clarity or just subtle. */
+.die-arrow {
+    opacity: 0.3; 
+}
+.die-wrapper:hover .die-arrow, .die-arrow:active {
+    opacity: 1;
+    color: var(--primary-color);
+}
+
 .die {
     width: var(--die-size);
     height: var(--die-size);
@@ -223,16 +251,20 @@ input:focus { border-color: var(--primary-color); }
     grid-template: repeat(3, 1fr) / repeat(3, 1fr);
     padding: 4px;
     box-sizing: border-box;
-    cursor: pointer;
+    cursor: grab;
     transition: transform 0.1s, box-shadow 0.1s;
     user-select: none;
+    position: relative;
+    touch-action: none; /* Critical for drag */
 }
-.die:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
+.die:active { cursor: grabbing; }
+
 .die.held {
     background: var(--accent-color);
     transform: translateY(4px);
     box-shadow: none;
     border: 2px solid var(--text-color);
+    cursor: pointer; /* Can't drag held dice */
 }
 .die .dot {
     background-color: var(--die-dot-color);
@@ -241,7 +273,7 @@ input:focus { border-color: var(--primary-color); }
     justify-self: center;
     width: 8px;
     height: 8px;
-    visibility: hidden; /* Hide by default, show based on value */
+    visibility: hidden; 
 }
 
 /* Buttons */
@@ -326,4 +358,7 @@ tr.total-row { background: var(--bg-color); font-weight: 700; }
     .die { width: 40px; height: 40px; }
     th, td { padding: 8px 10px; font-size: 14px; }
     .btn { padding: 10px 16px; }
+    
+    .die-wrapper { gap: 0; }
+    .die-arrow { font-size: 16px; padding: 4px; } /* Larger touch target for arrows on mobile */
 }
