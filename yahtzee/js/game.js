@@ -1,3 +1,29 @@
+// --- Theme Management ---
+const themeToggle = document.getElementById('themeToggle');
+
+function initTheme() {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (saved === 'dark' || (!saved && prefersDark)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+}
+
+themeToggle.onclick = () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+};
+
+initTheme();
+
+
+// --- Game Logic ---
+
 const CATEGORIES = [
     { key: 'ones', label: 'Ones' },
     { key: 'twos', label: 'Twos' },
@@ -7,22 +33,22 @@ const CATEGORIES = [
     { key: 'sixes', label: 'Sixes' },
     { key: 'subtotal', label: 'Sum', type: 'calc' },
     { key: 'bonus', label: 'Bonus', type: 'calc' },
-    { key: 'upperTotal', label: 'Upper Total', type: 'calc' },
+    { key: 'upperTotal', label: 'Upper Total', type: 'calc', isHeader: true },
     { key: 'threeOfAKind', label: 'Three of a Kind' },
     { key: 'fourOfAKind', label: 'Four of a Kind' },
     { key: 'fullHouse', label: 'Full House' },
-    { key: 'smallStraight', label: 'Small Straight' },
-    { key: 'largeStraight', label: 'Large Straight' },
+    { key: 'smallStraight', label: 'Sm. Straight' },
+    { key: 'largeStraight', label: 'Lg. Straight' },
     { key: 'yahtzee', label: 'Yahtzee' },
     { key: 'chance', label: 'Chance' },
     { key: 'lowerTotal', label: 'Lower Total', type: 'calc' },
-    { key: 'grandTotal', label: 'GRAND TOTAL', type: 'calc' }
+    { key: 'grandTotal', label: 'GRAND TOTAL', type: 'calc', isHeader: true }
 ];
 
 const SCORABLE_CATS = CATEGORIES.filter(c => !c.type).map(c => c.key);
 
 let appState = {
-    players: [], // { name: "Adam", scores: { ones: 3, ... } }
+    players: [],
     currentPlayerIndex: 0,
     dice: [0, 0, 0, 0, 0],
     rollsLeft: 3,
@@ -41,11 +67,39 @@ const diceContainer = document.getElementById('diceContainer');
 const rollBtn = document.getElementById('rollBtn');
 const scoreHeader = document.getElementById('headerRow');
 const scoreBody = document.getElementById('scoreBody');
-const scoreFoot = document.getElementById('scoreFoot'); // Not used in this grid layout, simplified to body
 const gameOverControls = document.getElementById('gameOverControls');
 const msgEl = document.getElementById('message');
 
-// --- Logic ---
+// --- Helpers ---
+
+// 3x3 Dot Map
+const DOT_MAP = {
+    1: [4],
+    2: [2, 6],
+    3: [2, 4, 6],
+    4: [0, 2, 6, 8],
+    5: [0, 2, 4, 6, 8],
+    6: [0, 2, 3, 5, 6, 8]
+};
+
+function renderDie(val, i, isHeld) {
+    const d = document.createElement('div');
+    d.className = 'die' + (isHeld ? ' held' : '');
+    d.onclick = () => toggleHold(i);
+    
+    // Create 9 dots
+    for (let dotIdx = 0; dotIdx < 9; dotIdx++) {
+        const dot = document.createElement('div');
+        dot.className = 'dot';
+        if (val > 0 && DOT_MAP[val].includes(dotIdx)) {
+            dot.style.visibility = 'visible';
+        }
+        d.appendChild(dot);
+    }
+    return d;
+}
+
+// --- Logic (Same as before) ---
 
 function calculateScore(category, dice) {
     const counts = {};
@@ -95,7 +149,7 @@ function updatePlayerTotals(player) {
     player.scores.grandTotal = player.scores.upperTotal + lower;
 }
 
-// --- Setup Actions ---
+// --- Actions ---
 
 function addPlayer() {
     const name = playerNameInput.value.trim();
@@ -106,11 +160,17 @@ function addPlayer() {
     }
 }
 
+function removePlayer(idx) {
+    appState.players.splice(idx, 1);
+    renderSetup();
+}
+
 function renderSetup() {
     playerListEl.innerHTML = '';
     appState.players.forEach((p, i) => {
         const li = document.createElement('li');
-        li.textContent = p.name;
+        li.className = 'player-tag';
+        li.innerHTML = `${p.name} <span class="remove-player" onclick="removePlayer(${i})">×</span>`;
         playerListEl.appendChild(li);
     });
     startGameBtn.disabled = appState.players.length === 0;
@@ -134,20 +194,27 @@ function resetTurn() {
     appState.dice = [0, 0, 0, 0, 0];
     appState.rollsLeft = 3;
     appState.held = [false, false, false, false, false];
-    // Don't reset gameOver here, that's global
 }
-
-// --- Game Actions ---
 
 function roll() {
     if (appState.rollsLeft > 0 && !appState.gameOver) {
-        for (let i = 0; i < 5; i++) {
-            if (!appState.held[i]) {
-                appState.dice[i] = Math.ceil(Math.random() * 6);
+        // Animate
+        const diceEls = document.querySelectorAll('.die');
+        diceEls.forEach(d => {
+            if (!d.classList.contains('held')) {
+                d.style.transform = `rotate(${Math.random() * 360}deg)`;
             }
-        }
-        appState.rollsLeft--;
-        renderGame();
+        });
+
+        setTimeout(() => {
+            for (let i = 0; i < 5; i++) {
+                if (!appState.held[i]) {
+                    appState.dice[i] = Math.ceil(Math.random() * 6);
+                }
+            }
+            appState.rollsLeft--;
+            renderGame();
+        }, 150); // Slight delay for animation feel
     }
 }
 
@@ -159,19 +226,16 @@ function toggleHold(index) {
 }
 
 function selectCategory(cat, playerIndex) {
-    // Validate: correct player, game running, dice rolled
     if (appState.gameOver) return;
     if (playerIndex !== appState.currentPlayerIndex) return;
-    if (appState.rollsLeft === 3 && appState.dice[0] === 0) return; // Haven't rolled yet
+    if (appState.rollsLeft === 3 && appState.dice[0] === 0) return;
 
     const player = appState.players[playerIndex];
-    if (player.scores[cat] !== undefined) return; // Already scored
+    if (player.scores[cat] !== undefined) return;
 
-    // Score it
     player.scores[cat] = calculateScore(cat, appState.dice);
     updatePlayerTotals(player);
 
-    // Check End of Game (if all players full)
     const allFull = appState.players.every(p => 
         SCORABLE_CATS.every(c => p.scores[c] !== undefined)
     );
@@ -180,7 +244,6 @@ function selectCategory(cat, playerIndex) {
         appState.gameOver = true;
         renderGame();
     } else {
-        // Next Turn
         appState.currentPlayerIndex = (appState.currentPlayerIndex + 1) % appState.players.length;
         resetTurn();
         renderGame();
@@ -188,13 +251,13 @@ function selectCategory(cat, playerIndex) {
 }
 
 function playAgain() {
-    // Reset scores, keep players
     appState.players.forEach(p => p.scores = {});
     appState.gameOver = false;
     appState.currentPlayerIndex = 0;
     resetTurn();
-    buildScoreTable(); // Clear visual scores
+    buildScoreTable();
     gameOverControls.classList.add('hidden');
+    rollBtn.classList.remove('hidden'); // Show roll button again
     renderGame();
 }
 
@@ -205,13 +268,13 @@ function newGroup() {
     gameScreen.classList.add('hidden');
     setupScreen.classList.remove('hidden');
     gameOverControls.classList.add('hidden');
+    rollBtn.classList.remove('hidden');
     renderSetup();
 }
 
 // --- Rendering ---
 
 function buildScoreTable() {
-    // Header
     scoreHeader.innerHTML = '<th>Category</th>';
     appState.players.forEach(p => {
         const th = document.createElement('th');
@@ -219,28 +282,26 @@ function buildScoreTable() {
         scoreHeader.appendChild(th);
     });
 
-    // Body
     scoreBody.innerHTML = '';
     CATEGORIES.forEach(catDef => {
         const tr = document.createElement('tr');
-        // Label
+        if (catDef.isHeader) tr.className = 'total-row';
+
         const tdLabel = document.createElement('td');
-        if (catDef.type === 'calc') tdLabel.innerHTML = `<strong>${catDef.label}</strong>`;
-        else tdLabel.textContent = catDef.label;
+        tdLabel.textContent = catDef.label;
+        if (catDef.isHeader) tdLabel.style.fontWeight = '800';
         tr.appendChild(tdLabel);
 
-        // Player Columns
         appState.players.forEach((p, pIdx) => {
             const td = document.createElement('td');
             td.id = `cell-${pIdx}-${catDef.key}`;
             
             if (!catDef.type) {
-                // Scorable cell
                 td.className = 'score-cell';
                 td.onclick = () => selectCategory(catDef.key, pIdx);
             } else {
-                // Calculated cell
-                td.style.backgroundColor = '#f9f9f9';
+                td.style.backgroundColor = 'var(--bg-color)';
+                td.style.cursor = 'default';
             }
             tr.appendChild(td);
         });
@@ -252,44 +313,45 @@ function renderGame() {
     // 1. Dice
     diceContainer.innerHTML = '';
     appState.dice.forEach((val, i) => {
-        const d = document.createElement('div');
-        d.className = 'die' + (appState.held[i] ? ' held' : '');
-        d.textContent = val || '-';
-        d.onclick = () => toggleHold(i);
-        diceContainer.appendChild(d);
+        diceContainer.appendChild(renderDie(val, i, appState.held[i]));
     });
 
-    // 2. Status / Message
+    // 2. Status
     const currentPlayer = appState.players[appState.currentPlayerIndex];
     
     if (appState.gameOver) {
         turnIndicator.textContent = "GAME OVER";
+        turnIndicator.style.background = "var(--accent-color)";
         msgEl.textContent = "Check totals below!";
-        rollBtn.textContent = "DONE";
-        rollBtn.disabled = true;
+        rollBtn.classList.add('hidden'); // Hide roll button
         gameOverControls.classList.remove('hidden');
     } else {
-        turnIndicator.textContent = `Current Turn: ${currentPlayer.name}`;
+        turnIndicator.textContent = `${currentPlayer.name}'s Turn`;
+        turnIndicator.style.background = "var(--text-color)";
         
-        if (appState.rollsLeft === 3) msgEl.textContent = "Roll the dice!";
-        else if (appState.rollsLeft === 0) msgEl.textContent = "Select a category.";
-        else msgEl.textContent = "Roll again or select category.";
+        if (appState.rollsLeft === 3) msgEl.textContent = "Roll to start";
+        else if (appState.rollsLeft === 0) msgEl.textContent = "Select category";
+        else msgEl.textContent = `${appState.rollsLeft} rolls left`;
         
-        rollBtn.textContent = `ROLL (${appState.rollsLeft})`;
+        rollBtn.textContent = appState.rollsLeft === 0 ? "Score to continue" : "ROLL";
         rollBtn.disabled = appState.rollsLeft === 0;
     }
 
-    // 3. Highlight active column
+    // 3. Highlight Columns
     const headerCells = scoreHeader.querySelectorAll('th');
     headerCells.forEach((th, i) => {
-        // i=0 is Label, i=1 is Player 0
         if (i === 0) return;
         const pIdx = i - 1;
-        if (pIdx === appState.currentPlayerIndex && !appState.gameOver) th.classList.add('current-player');
-        else th.classList.remove('current-player');
+        if (pIdx === appState.currentPlayerIndex && !appState.gameOver) {
+            th.classList.add('current-player-col');
+            th.style.color = 'var(--primary-color)';
+        } else {
+            th.classList.remove('current-player-col');
+            th.style.color = '';
+        }
     });
 
-    // 4. Update Cells
+    // 4. Update Table
     CATEGORIES.forEach(catDef => {
         appState.players.forEach((p, pIdx) => {
             const td = document.getElementById(`cell-${pIdx}-${catDef.key}`);
@@ -298,21 +360,22 @@ function renderGame() {
             const val = p.scores[catDef.key];
             const isMyTurn = (pIdx === appState.currentPlayerIndex) && !appState.gameOver;
             
-            // Render Value
-            td.innerHTML = (val !== undefined) ? val : '';
-            if (catDef.type === 'calc' && val !== undefined) td.innerHTML = `<strong>${val}</strong>`;
+            td.textContent = (val !== undefined) ? val : '';
+            if (catDef.type === 'calc' && val !== undefined) td.style.fontWeight = 'bold';
 
-            // Classes
-            if (isMyTurn) td.classList.add('current-player');
-            else td.classList.remove('current-player');
+            if (isMyTurn && !appState.gameOver) {
+                 td.classList.add('current-player-col');
+            } else {
+                 td.classList.remove('current-player-col');
+            }
 
             if (!catDef.type) {
                 if (val !== undefined) {
                     td.classList.add('filled');
                     td.classList.remove('active-turn');
                 } else if (isMyTurn && appState.rollsLeft < 3) {
-                    // It is my turn, I have rolled, and this is empty
                     td.classList.add('active-turn');
+                    // Preview score potential could go here
                 } else {
                     td.classList.remove('active-turn');
                 }
@@ -321,17 +384,15 @@ function renderGame() {
     });
 }
 
-// --- Event Listeners ---
+// --- Init ---
 document.getElementById('addPlayerBtn').onclick = addPlayer;
 playerNameInput.addEventListener('keypress', (e) => {
     if (e.key === 'Enter') addPlayer();
 });
-startGameBtn.onclick = startGame;
+document.getElementById('startGameBtn').onclick = startGame;
 document.getElementById('quickStartBtn').onclick = quickStart;
-
 document.getElementById('rollBtn').onclick = roll;
 document.getElementById('playAgainBtn').onclick = playAgain;
 document.getElementById('newGroupBtn').onclick = newGroup;
 
-// Init
 renderSetup();

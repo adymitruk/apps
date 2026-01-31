@@ -1,245 +1,329 @@
+:root {
+    /* Light Theme (Default) */
+    --bg-color: #f4f6f8;
+    --surface-color: #ffffff;
+    --text-color: #2c3e50;
+    --text-secondary: #636e72;
+    --primary-color: #2980b9;
+    --primary-hover: #3498db;
+    --accent-color: #e67e22; /* Dice/Highlight */
+    --success-color: #27ae60;
+    --border-color: #dfe6e9;
+    --shadow: 0 4px 6px rgba(0,0,0,0.1);
+    --radius: 12px;
+    --die-size: 50px;
+    --die-dot-color: #2d3436;
+    --die-bg: #ffffff;
+    --highlight-bg: #e3f2fd;
+    --active-turn-bg: #fff3e0;
+}
+
+[data-theme="dark"] {
+    --bg-color: #121212;
+    --surface-color: #1e1e1e;
+    --text-color: #ecf0f1;
+    --text-secondary: #b2bec3;
+    --primary-color: #3498db;
+    --primary-hover: #2980b9;
+    --accent-color: #f39c12;
+    --success-color: #2ecc71;
+    --border-color: #333;
+    --shadow: 0 4px 6px rgba(0,0,0,0.3);
+    --die-dot-color: #121212;
+    --die-bg: #ecf0f1;
+    --highlight-bg: #2c3e50;
+    --active-turn-bg: #3d342b;
+}
+
 body {
-    font-family: 'Courier New', Courier, monospace;
-    background-color: #f0f0f0;
-    color: #333;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    margin: 0;
+    padding: 20px;
+    transition: background-color 0.3s, color 0.3s;
     display: flex;
     justify-content: center;
-    padding: 20px;
-    margin: 0;
 }
 
 .container {
-    background: #fff;
-    padding: 20px;
-    border: 4px solid #333;
+    background: var(--surface-color);
+    padding: 25px;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
     width: 100%;
-    max-width: 1200px; /* Wider for multiplayer table */
+    max-width: 1200px;
     box-sizing: border-box;
+    transition: background-color 0.3s;
+}
+
+/* Header & Theme Toggle */
+.header-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    border-bottom: 2px solid var(--border-color);
+    padding-bottom: 10px;
 }
 
 h1 {
-    text-align: center;
-    border-bottom: 4px solid #333;
-    margin-top: 0;
-    margin-bottom: 20px;
+    margin: 0;
+    font-size: 2rem;
+    font-weight: 800;
+    letter-spacing: -1px;
+    color: var(--text-color);
 }
 
-/* Screen Management */
-.screen {
-    display: block;
-}
-.screen.hidden {
-    display: none;
-}
-
-/* Setup Screen */
-.setup-controls {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-bottom: 20px;
-}
-input {
-    padding: 10px;
-    font-family: inherit;
-    font-size: 16px;
-    border: 2px solid #333;
-}
-.player-list {
-    list-style: none;
-    padding: 0;
-    text-align: center;
-    margin-bottom: 20px;
-}
-.player-list li {
-    background: #e0e0e0;
-    display: inline-block;
-    padding: 5px 10px;
-    margin: 5px;
-    border: 1px solid #333;
-}
-.setup-actions {
-    text-align: center;
-}
-.divider {
-    margin: 10px 0;
-    font-weight: bold;
-    color: #666;
-}
-
-/* Game Area */
-.game-area {
-    text-align: center;
-    margin-bottom: 20px;
-    padding: 20px;
-    background: #e0e0e0;
-    border: 2px solid #333;
-}
-
-.turn-indicator {
-    font-size: 1.2em;
-    font-weight: bold;
-    margin-bottom: 10px;
-    background: #333;
-    color: #fff;
-    padding: 5px;
-    display: inline-block;
-}
-
-.dice-container {
-    display: flex;
-    justify-content: center;
-    gap: 10px;
-    margin: 20px 0;
-    flex-wrap: wrap; /* Wrap on tiny screens */
-}
-
-.die {
-    width: 50px;
-    height: 50px;
-    background: #fff;
-    border: 2px solid #333;
+.theme-toggle {
+    background: none;
+    border: 2px solid var(--border-color);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    font-size: 20px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 24px;
-    font-weight: bold;
+    color: var(--text-color);
+    padding: 0;
+    transition: all 0.2s;
+}
+.theme-toggle:hover {
+    background-color: var(--bg-color);
+    border-color: var(--text-color);
+}
+
+/* Setup Screen */
+.screen {
+    animation: fadeIn 0.3s ease-in-out;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.hidden { display: none; }
+
+.setup-card {
+    max-width: 500px;
+    margin: 0 auto;
+    text-align: center;
+}
+
+.input-group {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+}
+
+input {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid var(--border-color);
+    background: var(--bg-color);
+    color: var(--text-color);
+    border-radius: var(--radius);
+    font-size: 16px;
+    outline: none;
+}
+input:focus { border-color: var(--primary-color); }
+
+.player-list {
+    list-style: none;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 30px;
+}
+
+.player-tag {
+    background: var(--primary-color);
+    color: white;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.player-tag .remove-player {
     cursor: pointer;
+    opacity: 0.7;
+    font-weight: bold;
+}
+.player-tag .remove-player:hover { opacity: 1; }
+
+.divider {
+    margin: 20px 0;
+    color: var(--text-secondary);
+    font-size: 14px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Game Area */
+#gameScreen {
+    display: grid;
+    gap: 30px;
+}
+
+@media (min-width: 900px) {
+    #gameScreen {
+        grid-template-columns: 350px 1fr;
+        align-items: start;
+    }
+}
+
+.game-controls-area {
+    background: var(--bg-color);
+    padding: 20px;
+    border-radius: var(--radius);
+    text-align: center;
+}
+
+.turn-indicator {
+    background: var(--text-color);
+    color: var(--bg-color);
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-weight: 700;
+    display: inline-block;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
+}
+
+.message {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 20px;
+    min-height: 1.5em;
+    color: var(--text-secondary);
+}
+
+/* DICE */
+.dice-container {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 25px;
+    perspective: 1000px;
+}
+
+.die {
+    width: var(--die-size);
+    height: var(--die-size);
+    background: var(--die-bg);
+    border-radius: 8px;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    display: grid;
+    grid-template: repeat(3, 1fr) / repeat(3, 1fr);
+    padding: 4px;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: transform 0.1s, box-shadow 0.1s;
     user-select: none;
 }
+.die:active { transform: translateY(2px); box-shadow: 0 2px 0 rgba(0,0,0,0.2); }
 .die.held {
-    background: #333;
-    color: #fff;
-    border-color: #000;
+    background: var(--accent-color);
+    transform: translateY(4px);
+    box-shadow: none;
+    border: 2px solid var(--text-color);
+}
+.die .dot {
+    background-color: var(--die-dot-color);
+    border-radius: 50%;
+    align-self: center;
+    justify-self: center;
+    width: 8px;
+    height: 8px;
+    visibility: hidden; /* Hide by default, show based on value */
 }
 
-button {
-    background: #333;
-    color: #fff;
+/* Buttons */
+.btn {
+    background: var(--primary-color);
+    color: white;
     border: none;
-    padding: 10px 20px;
-    font-family: inherit;
+    padding: 12px 24px;
+    border-radius: var(--radius);
     font-size: 16px;
+    font-weight: 700;
     cursor: pointer;
-    margin: 5px;
+    transition: background 0.2s, transform 0.1s;
+    width: 100%;
 }
-button:hover { background: #555; }
-button:disabled { background: #999; cursor: not-allowed; }
-
-.reset-btn {
-    background: #555;
-}
+.btn:hover { background: var(--primary-hover); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { background: var(--text-secondary); opacity: 0.5; cursor: not-allowed; }
+.btn-secondary { background: transparent; border: 2px solid var(--text-secondary); color: var(--text-secondary); }
+.btn-secondary:hover { background: var(--bg-color); color: var(--text-color); border-color: var(--text-color); }
 
 /* Score Sheet */
-.score-sheet-container {
-    margin-top: 20px;
+.table-container {
+    overflow-x: auto;
+    background: var(--surface-color);
+    border-radius: var(--radius);
+    box-shadow: inset 0 0 0 1px var(--border-color);
 }
-.table-wrapper {
-    overflow-x: auto; /* Scroll if too many players */
-}
+
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 300px;
+    min-width: 400px;
 }
+
 th, td {
-    border: 1px solid #333;
-    padding: 8px;
-    text-align: center; /* Center scores */
-}
-th:first-child, td:first-child {
-    text-align: left; /* Categories left-aligned */
-    position: sticky; /* Keep category visible on scroll */
-    left: 0;
-    background: #fff;
-    z-index: 1;
-}
-
-/* Cell Interaction */
-.score-cell {
-    cursor: pointer;
-}
-.score-cell:hover {
-    background: #ffffcc;
-}
-.score-cell.active-turn:hover {
-    background: #ffff99; /* Stronger highlight for current player */
-}
-.score-cell.filled {
-    background: #f0f0f0;
-    color: #666;
-    cursor: default;
-}
-.score-cell.potential {
-    color: #999; /* Preview score? Optional enhancement */
-}
-
-/* Highlight current player column */
-th.current-player, td.current-player {
-    background-color: #e6f7ff;
-}
-th:first-child.current-player, td:first-child.current-player {
-    background-color: #fff; /* Don't highlight sticky header background incorrectly */
-    box-shadow: inset 0 0 0 2px #333; /* Alternative indicator? or just ignore sticky col */
-}
-
-.game-over-controls {
+    padding: 12px 16px;
     text-align: center;
-    margin-top: 20px;
-    padding: 20px;
-    background: #dff0d8;
-    border: 2px solid #3c763d;
+    border-bottom: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
 }
-.game-over-controls.hidden {
-    display: none;
-}
+th:last-child, td:last-child { border-right: none; }
+tr:last-child td { border-bottom: none; }
 
-/* Responsive Layouts */
-
-/* Desktop/Tablet (Landscape) */
-@media (min-width: 768px) {
-    #gameScreen {
-        display: grid;
-        grid-template-columns: 1fr 1.5fr;
-        gap: 20px;
-        align-items: start;
-    }
-    .game-area {
-        margin-bottom: 0;
-    }
-    .score-sheet-container {
-        margin-top: 0;
-    }
-    .game-over-controls {
-        grid-column: 1 / -1;
-    }
+th {
+    background: var(--bg-color);
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
 }
 
-/* Foldable/Square (approx aspect ratio check or width range) */
-@media (min-width: 500px) and (max-width: 767px) {
-    /* Stacked but maybe side-by-side elements inside? 
-       Actually, standard vertical stack works fine for square, 
-       just ensure width utilizes space. */
-    .container {
-        padding: 10px;
-    }
-    .die {
-        width: 60px;
-        height: 60px;
-    }
+/* Sticky First Column */
+th:first-child, td:first-child {
+    position: sticky;
+    left: 0;
+    background: var(--surface-color);
+    z-index: 2;
+    text-align: left;
+    border-right: 2px solid var(--border-color);
+    font-weight: 600;
+    color: var(--text-color);
 }
+th:first-child { z-index: 3; background: var(--bg-color); }
 
-/* Slab Phone (Narrow) */
-@media (max-width: 499px) {
-    .container {
-        padding: 10px;
-        border-width: 2px;
-    }
-    h1 { font-size: 1.5em; }
-    .die {
-        width: 40px;
-        height: 40px;
-        font-size: 18px;
-    }
-    th, td { padding: 4px; font-size: 14px; }
+/* Interactions */
+.score-cell { cursor: pointer; transition: background 0.2s; font-variant-numeric: tabular-nums; }
+.score-cell:hover:not(.filled) { background: var(--highlight-bg); }
+.score-cell.active-turn { background: var(--active-turn-bg); color: var(--primary-color); font-weight: bold; box-shadow: inset 0 0 0 2px var(--accent-color); }
+.score-cell.filled { color: var(--text-secondary); cursor: default; }
+
+.current-player-col { background-color: rgba(var(--primary-color), 0.05); }
+
+/* Totals Row */
+tr.total-row { background: var(--bg-color); font-weight: 700; }
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+    .container { padding: 15px; }
+    h1 { font-size: 1.5rem; }
+    .die { width: 40px; height: 40px; }
+    th, td { padding: 8px 10px; font-size: 14px; }
+    .btn { padding: 10px 16px; }
 }
