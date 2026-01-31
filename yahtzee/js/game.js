@@ -1,3 +1,29 @@
+// --- Theme Management ---
+const themeToggle = document.getElementById('themeToggle');
+
+function initTheme() {
+    const saved = localStorage.getItem('theme');
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    
+    if (saved === 'dark' || (!saved && prefersDark)) {
+        document.documentElement.setAttribute('data-theme', 'dark');
+    } else {
+        document.documentElement.setAttribute('data-theme', 'light');
+    }
+}
+
+themeToggle.onclick = () => {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+};
+
+initTheme();
+
+
+// --- Game Logic ---
+
 const CATEGORIES_UPPER = [
     { key: 'ones', label: 'Ones' },
     { key: 'twos', label: 'Twos' },
