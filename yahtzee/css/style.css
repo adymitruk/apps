@@ -258,7 +258,7 @@ input:focus { border-color: var(--primary-color); }
 @media (min-width: 768px) {
     #gameScreen {
         display: grid;
-        grid-template-columns: 350px 1fr;
+        grid-template-columns: 1fr 1fr; /* Split 50/50 to use space */
         grid-template-rows: 1fr; /* Fill height */
         align-items: stretch;
         gap: 20px;
@@ -268,7 +268,22 @@ input:focus { border-color: var(--primary-color); }
         height: 100%;
         display: flex;
         flex-direction: column;
-        justify-content: flex-start; /* Align top */
+        justify-content: center; /* Center controls vertically in the big space */
+    }
+
+    /* Scale up for large screens */
+    .die { width: 80px; height: 80px; } /* Bigger dice */
+    .btn { font-size: 20px; padding: 20px; } /* Bigger buttons */
+    .turn-indicator { font-size: 1.2rem; padding: 10px 20px; }
+    .message { font-size: 1.5rem; }
+    
+    th, td {
+        font-size: 18px; /* Bigger table text */
+        padding: 16px;
+    }
+    th:first-child, td:first-child {
+        font-size: 18px;
+        min-width: 150px;
     }
 }
 
