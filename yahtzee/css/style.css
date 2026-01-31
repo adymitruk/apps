@@ -6,12 +6,12 @@
     --text-secondary: #636e72;
     --primary-color: #2980b9;
     --primary-hover: #3498db;
-    --accent-color: #e67e22; /* Dice/Highlight */
+    --accent-color: #e67e22;
     --success-color: #27ae60;
     --border-color: #dfe6e9;
     --shadow: 0 4px 6px rgba(0,0,0,0.1);
     --radius: 12px;
-    --die-size: 50px;
+    --die-size: 48px;
     --die-dot-color: #2d3436;
     --die-bg: #ffffff;
     --highlight-bg: #e3f2fd;
@@ -40,21 +40,22 @@ body {
     background-color: var(--bg-color);
     color: var(--text-color);
     margin: 0;
-    padding: 20px;
-    transition: background-color 0.3s, color 0.3s;
+    padding: 10px;
+    min-height: 100vh;
+    box-sizing: border-box;
     display: flex;
     justify-content: center;
+    align-items: flex-start;
 }
 
 .container {
     background: var(--surface-color);
-    padding: 25px;
+    padding: 15px;
     border-radius: var(--radius);
     box-shadow: var(--shadow);
     width: 100%;
     max-width: 1200px;
     box-sizing: border-box;
-    transition: background-color 0.3s;
 }
 
 /* Header & Theme Toggle */
@@ -62,14 +63,14 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 20px;
-    border-bottom: 2px solid var(--border-color);
+    margin-bottom: 15px;
+    border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
 }
 
 h1 {
     margin: 0;
-    font-size: 2rem;
+    font-size: 1.5rem;
     font-weight: 800;
     letter-spacing: -1px;
     color: var(--text-color);
@@ -77,53 +78,56 @@ h1 {
 
 .theme-toggle {
     background: none;
-    border: 2px solid var(--border-color);
+    border: 1px solid var(--border-color);
     border-radius: 50%;
-    width: 40px;
-    height: 40px;
+    width: 32px;
+    height: 32px;
     cursor: pointer;
-    font-size: 20px;
+    font-size: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
     color: var(--text-color);
     padding: 0;
-    transition: all 0.2s;
-}
-.theme-toggle:hover {
-    background-color: var(--bg-color);
-    border-color: var(--text-color);
 }
 
 /* Setup Screen */
 .screen {
     animation: fadeIn 0.3s ease-in-out;
+    width: 100%;
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-.hidden { display: none; }
+/* Fix visibility issue by using !important or high specificity */
+.hidden { display: none !important; }
 
 .setup-card {
-    max-width: 500px;
-    margin: 0 auto;
+    max-width: 400px;
+    margin: 20px auto;
     text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
 }
 
 .input-group {
     display: flex;
     gap: 10px;
-    margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    align-items: stretch; /* Ensure same height */
 }
 
 input {
     flex: 1;
-    padding: 12px;
+    padding: 12px 16px;
     border: 2px solid var(--border-color);
     background: var(--bg-color);
     color: var(--text-color);
     border-radius: var(--radius);
     font-size: 16px;
     outline: none;
+    min-width: 0;
 }
 input:focus { border-color: var(--primary-color); }
 
@@ -133,14 +137,15 @@ input:focus { border-color: var(--primary-color); }
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 10px;
-    margin-bottom: 30px;
+    gap: 8px;
+    min-height: 10px;
 }
 
 .player-tag {
-    background: var(--primary-color);
-    color: white;
-    padding: 8px 16px;
+    background: var(--surface-color);
+    border: 1px solid var(--primary-color);
+    color: var(--primary-color);
+    padding: 6px 12px;
     border-radius: 20px;
     font-weight: 600;
     font-size: 14px;
@@ -151,36 +156,101 @@ input:focus { border-color: var(--primary-color); }
 
 .player-tag .remove-player {
     cursor: pointer;
-    opacity: 0.7;
     font-weight: bold;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: rgba(0,0,0,0.1);
+    border-radius: 50%;
+    font-size: 12px;
+    line-height: 1;
 }
-.player-tag .remove-player:hover { opacity: 1; }
+.player-tag .remove-player:hover { background: rgba(0,0,0,0.2); }
 
 .divider {
-    margin: 20px 0;
     color: var(--text-secondary);
     font-size: 14px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 1px;
+    position: relative;
+    margin: 10px 0;
+}
+.divider::before, .divider::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: var(--border-color);
+}
+.divider::before { left: 0; }
+.divider::after { right: 0; }
+
+/* Buttons */
+.btn {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+    padding: 14px 24px;
+    border-radius: var(--radius);
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    width: 100%;
+    transition: background 0.2s, transform 0.1s;
+    box-sizing: border-box;
+    line-height: 1.2;
+}
+.btn:hover { background: var(--primary-hover); }
+.btn:active { transform: scale(0.98); }
+.btn:disabled { background: var(--border-color); color: var(--text-secondary); cursor: not-allowed; opacity: 1; }
+
+.btn-secondary { 
+    background: transparent; 
+    border: 2px solid var(--border-color); 
+    color: var(--text-secondary); 
+}
+.btn-secondary:hover { 
+    border-color: var(--text-color); 
+    color: var(--text-color); 
+    background: var(--bg-color);
 }
 
-/* Game Area */
+/* Game Area Layout */
 #gameScreen {
-    display: grid;
-    gap: 30px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
 }
 
-@media (min-width: 900px) {
+/* Foldable Unfolded / Tablet / Desktop */
+@media (min-width: 600px) {
     #gameScreen {
-        grid-template-columns: 350px 1fr;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        gap: 20px;
         align-items: start;
+        height: calc(100vh - 100px);
+        overflow: hidden;
+    }
+    
+    .table-container {
+        height: 100%;
+        overflow-y: auto;
+    }
+
+    body {
+        align-items: center;
+        padding: 20px;
     }
 }
 
 .game-controls-area {
     background: var(--bg-color);
-    padding: 20px;
+    padding: 15px;
     border-radius: var(--radius);
     text-align: center;
 }
@@ -188,19 +258,19 @@ input:focus { border-color: var(--primary-color); }
 .turn-indicator {
     background: var(--text-color);
     color: var(--bg-color);
-    padding: 8px 16px;
-    border-radius: 20px;
+    padding: 6px 12px;
+    border-radius: 15px;
     font-weight: 700;
     display: inline-block;
-    margin-bottom: 15px;
-    font-size: 0.9rem;
+    margin-bottom: 10px;
+    font-size: 0.85rem;
 }
 
 .message {
-    font-size: 1.1rem;
+    font-size: 1rem;
     font-weight: 600;
-    margin-bottom: 20px;
-    min-height: 1.5em;
+    margin-bottom: 15px;
+    min-height: 1.2em;
     color: var(--text-secondary);
 }
 
@@ -208,33 +278,26 @@ input:focus { border-color: var(--primary-color); }
 .dice-container {
     display: flex;
     justify-content: center;
-    gap: 12px;
-    margin-bottom: 25px;
-    perspective: 1000px;
+    gap: 8px;
+    margin-bottom: 20px;
 }
 
-/* Die Wrapper to hold arrows */
 .die-wrapper {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 2px;
+    gap: 0;
 }
 
 .die-arrow {
-    font-size: 12px;
+    font-size: 14px;
     color: var(--text-secondary);
     cursor: pointer;
-    opacity: 0; /* Hidden by default, show on hover or always? */
-    transition: opacity 0.2s;
+    opacity: 0.3;
+    padding: 4px 10px;
     user-select: none;
-    padding: 2px;
-}
-/* Show arrows on hover of the wrapper, OR always visible on touch? 
-   Let's make them visible always for clarity or just subtle. */
-.die-arrow {
-    opacity: 0.3; 
+    transition: opacity 0.2s;
 }
 .die-wrapper:hover .die-arrow, .die-arrow:active {
     opacity: 1;
@@ -246,54 +309,30 @@ input:focus { border-color: var(--primary-color); }
     height: var(--die-size);
     background: var(--die-bg);
     border-radius: 8px;
-    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
+    box-shadow: 0 3px 0 rgba(0,0,0,0.2);
     display: grid;
     grid-template: repeat(3, 1fr) / repeat(3, 1fr);
-    padding: 4px;
+    padding: 3px;
     box-sizing: border-box;
     cursor: grab;
-    transition: transform 0.1s, box-shadow 0.1s;
-    user-select: none;
     position: relative;
-    touch-action: none; /* Critical for drag */
+    touch-action: none;
 }
-.die:active { cursor: grabbing; }
-
 .die.held {
     background: var(--accent-color);
-    transform: translateY(4px);
+    transform: translateY(3px);
     box-shadow: none;
     border: 2px solid var(--text-color);
-    cursor: pointer; /* Can't drag held dice */
 }
 .die .dot {
     background-color: var(--die-dot-color);
     border-radius: 50%;
     align-self: center;
     justify-self: center;
-    width: 8px;
-    height: 8px;
+    width: 7px;
+    height: 7px;
     visibility: hidden; 
 }
-
-/* Buttons */
-.btn {
-    background: var(--primary-color);
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: var(--radius);
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: background 0.2s, transform 0.1s;
-    width: 100%;
-}
-.btn:hover { background: var(--primary-hover); }
-.btn:active { transform: scale(0.98); }
-.btn:disabled { background: var(--text-secondary); opacity: 0.5; cursor: not-allowed; }
-.btn-secondary { background: transparent; border: 2px solid var(--text-secondary); color: var(--text-secondary); }
-.btn-secondary:hover { background: var(--bg-color); color: var(--text-color); border-color: var(--text-color); }
 
 /* Score Sheet */
 .table-container {
@@ -301,30 +340,30 @@ input:focus { border-color: var(--primary-color); }
     background: var(--surface-color);
     border-radius: var(--radius);
     box-shadow: inset 0 0 0 1px var(--border-color);
+    scrollbar-width: thin;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 400px;
+    min-width: 300px;
 }
 
 th, td {
-    padding: 12px 16px;
+    padding: 10px 8px;
     text-align: center;
     border-bottom: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
+    font-size: 14px;
 }
 th:last-child, td:last-child { border-right: none; }
-tr:last-child td { border-bottom: none; }
 
 th {
     background: var(--bg-color);
     font-weight: 700;
     color: var(--text-secondary);
     text-transform: uppercase;
-    font-size: 0.8rem;
-    letter-spacing: 0.5px;
+    font-size: 0.75rem;
 }
 
 /* Sticky First Column */
@@ -337,28 +376,32 @@ th:first-child, td:first-child {
     border-right: 2px solid var(--border-color);
     font-weight: 600;
     color: var(--text-color);
+    min-width: 100px;
+    max-width: 120px;
 }
 th:first-child { z-index: 3; background: var(--bg-color); }
 
-/* Interactions */
-.score-cell { cursor: pointer; transition: background 0.2s; font-variant-numeric: tabular-nums; }
-.score-cell:hover:not(.filled) { background: var(--highlight-bg); }
+.score-cell { font-variant-numeric: tabular-nums; }
 .score-cell.active-turn { background: var(--active-turn-bg); color: var(--primary-color); font-weight: bold; box-shadow: inset 0 0 0 2px var(--accent-color); }
-.score-cell.filled { color: var(--text-secondary); cursor: default; }
 
-.current-player-col { background-color: rgba(var(--primary-color), 0.05); }
-
-/* Totals Row */
-tr.total-row { background: var(--bg-color); font-weight: 700; }
-
-/* Responsive adjustments */
-@media (max-width: 600px) {
-    .container { padding: 15px; }
-    h1 { font-size: 1.5rem; }
-    .die { width: 40px; height: 40px; }
-    th, td { padding: 8px 10px; font-size: 14px; }
-    .btn { padding: 10px 16px; }
+/* Mobile (Folded / Slab) Tweaks */
+@media (max-width: 599px) {
+    body { padding: 5px; }
+    .container { padding: 10px; }
     
-    .die-wrapper { gap: 0; }
-    .die-arrow { font-size: 16px; padding: 4px; } /* Larger touch target for arrows on mobile */
+    .die { width: 44px; height: 44px; }
+    .die-arrow { padding: 2px 10px; font-size: 12px; }
+    
+    th, td { padding: 8px 4px; font-size: 13px; }
+    th:first-child, td:first-child { 
+        font-size: 13px; 
+        padding-left: 8px;
+        width: 90px;
+        min-width: unset;
+    }
+    
+    .game-controls-area { padding: 10px; margin-bottom: 0; }
+    .message { margin-bottom: 10px; font-size: 0.9rem; }
+    .dice-container { margin-bottom: 10px; gap: 6px; }
+    h1 { font-size: 1.2rem; }
 }
