@@ -1,0 +1,106 @@
+body {
+    font-family: 'Courier New', Courier, monospace;
+    background-color: #f0f0f0;
+    color: #333;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.container {
+    background: #fff;
+    padding: 20px;
+    border: 4px solid #333;
+    max-width: 600px;
+    width: 100%;
+}
+
+h1 {
+    text-align: center;
+    border-bottom: 4px solid #333;
+    margin-top: 0;
+}
+
+.game-area {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: #e0e0e0;
+    border: 2px solid #333;
+}
+
+.dice-container {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.die {
+    width: 50px;
+    height: 50px;
+    background: #fff;
+    border: 2px solid #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    cursor: pointer;
+    user-select: none;
+}
+
+.die.held {
+    background: #333;
+    color: #fff;
+    border-color: #000;
+}
+
+button {
+    background: #333;
+    color: #fff;
+    border: none;
+    padding: 10px 20px;
+    font-family: inherit;
+    font-size: 16px;
+    cursor: pointer;
+    margin: 5px;
+}
+
+button:hover {
+    background: #555;
+}
+
+button:disabled {
+    background: #999;
+    cursor: not-allowed;
+}
+
+.score-sheet table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.score-sheet th, .score-sheet td {
+    border: 1px solid #333;
+    padding: 8px;
+    text-align: left;
+}
+
+/* Hover effect only for rows that haven't been scored yet */
+.score-sheet tbody tr:not(.used):hover {
+    background: #ffffcc;
+    cursor: pointer;
+}
+
+.score-sheet tr.used {
+    background: #ddd;
+    color: #666;
+    cursor: default;
+}
+
+.message {
+    font-weight: bold;
+    min-height: 24px;
+}
