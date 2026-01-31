@@ -35,27 +35,46 @@
     --active-turn-bg: #3d342b;
 }
 
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    height: 100%;
+}
+
 body {
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     background-color: var(--bg-color);
     color: var(--text-color);
-    margin: 0;
-    padding: 10px;
-    min-height: 100vh;
-    box-sizing: border-box;
     display: flex;
-    justify-content: center;
-    align-items: flex-start;
+    flex-direction: column;
 }
 
 .container {
     background: var(--surface-color);
-    padding: 15px;
-    border-radius: var(--radius);
-    box-shadow: var(--shadow);
     width: 100%;
-    max-width: 1200px;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
     box-sizing: border-box;
+    padding: 15px;
+}
+
+/* On larger screens, don't just center a small box, FILL the screen with a max constraint but centered if huge */
+@media (min-width: 1024px) {
+    body {
+        align-items: center;
+        justify-content: center;
+        background-color: var(--bg-color); /* Ensure background is visible outside container */
+        padding: 20px;
+    }
+    .container {
+        height: auto;
+        min-height: 80vh; /* Takes up most of screen height */
+        max-width: 1200px;
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+    }
 }
 
 /* Header & Theme Toggle */
@@ -63,9 +82,9 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
-    border-bottom: 1px solid var(--border-color);
     padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 h1 {
@@ -91,36 +110,40 @@ h1 {
     padding: 0;
 }
 
-/* Setup Screen */
+/* SETUP SCREEN (Flex Fill) */
 .screen {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
     animation: fadeIn 0.3s ease-in-out;
     width: 100%;
+    overflow-y: auto; /* Allow scroll if needed */
 }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
-/* Fix visibility issue by using !important or high specificity */
 .hidden { display: none !important; }
 
 .setup-card {
-    max-width: 400px;
-    margin: 20px auto;
+    width: 100%;
+    max-width: 500px; /* Keep content readable width */
+    margin: auto; /* Center in the flex container */
     text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 15px;
+    gap: 20px;
+    padding: 20px 0;
 }
 
 .input-group {
     display: flex;
     gap: 10px;
     width: 100%;
-    box-sizing: border-box;
-    align-items: stretch; /* Ensure same height */
+    height: 50px; /* Fixed height for touch targets */
 }
 
 input {
     flex: 1;
-    padding: 12px 16px;
+    padding: 0 16px;
     border: 2px solid var(--border-color);
     background: var(--bg-color);
     color: var(--text-color);
@@ -128,6 +151,8 @@ input {
     font-size: 16px;
     outline: none;
     min-width: 0;
+    height: 100%;
+    box-sizing: border-box;
 }
 input:focus { border-color: var(--primary-color); }
 
@@ -137,15 +162,15 @@ input:focus { border-color: var(--primary-color); }
     display: flex;
     flex-wrap: wrap;
     justify-content: center;
-    gap: 8px;
-    min-height: 10px;
+    gap: 10px;
+    min-height: 20px;
 }
 
 .player-tag {
     background: var(--surface-color);
     border: 1px solid var(--primary-color);
     color: var(--primary-color);
-    padding: 6px 12px;
+    padding: 8px 16px;
     border-radius: 20px;
     font-weight: 600;
     font-size: 14px;
@@ -160,12 +185,11 @@ input:focus { border-color: var(--primary-color); }
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 16px;
-    height: 16px;
+    width: 20px;
+    height: 20px;
     background: rgba(0,0,0,0.1);
     border-radius: 50%;
     font-size: 12px;
-    line-height: 1;
 }
 .player-tag .remove-player:hover { background: rgba(0,0,0,0.2); }
 
@@ -194,15 +218,16 @@ input:focus { border-color: var(--primary-color); }
     background: var(--primary-color);
     color: white;
     border: none;
-    padding: 14px 24px;
+    height: 50px; /* Consistent height */
     border-radius: var(--radius);
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
     width: 100%;
     transition: background 0.2s, transform 0.1s;
-    box-sizing: border-box;
-    line-height: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 .btn:hover { background: var(--primary-hover); }
 .btn:active { transform: scale(0.98); }
@@ -219,57 +244,57 @@ input:focus { border-color: var(--primary-color); }
     background: var(--bg-color);
 }
 
-/* Game Area Layout */
+/* GAME SCREEN (Flex Layout) */
 #gameScreen {
+    flex: 1;
     display: flex;
     flex-direction: column;
     gap: 20px;
+    overflow: hidden; /* Prevent body scroll, handle internally */
+    padding-top: 20px;
 }
 
-/* Foldable Unfolded / Tablet / Desktop */
-@media (min-width: 600px) {
+/* Desktop/Tablet Grid */
+@media (min-width: 768px) {
     #gameScreen {
         display: grid;
-        grid-template-columns: 320px 1fr;
+        grid-template-columns: 350px 1fr;
+        grid-template-rows: 1fr; /* Fill height */
+        align-items: stretch;
         gap: 20px;
-        align-items: start;
-        height: calc(100vh - 100px);
-        overflow: hidden;
     }
     
-    .table-container {
+    .game-controls-area {
         height: 100%;
-        overflow-y: auto;
-    }
-
-    body {
-        align-items: center;
-        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start; /* Align top */
     }
 }
 
 .game-controls-area {
     background: var(--bg-color);
-    padding: 15px;
+    padding: 20px;
     border-radius: var(--radius);
     text-align: center;
+    flex-shrink: 0;
 }
 
 .turn-indicator {
     background: var(--text-color);
     color: var(--bg-color);
-    padding: 6px 12px;
+    padding: 6px 16px;
     border-radius: 15px;
     font-weight: 700;
     display: inline-block;
-    margin-bottom: 10px;
-    font-size: 0.85rem;
+    margin-bottom: 15px;
+    font-size: 0.9rem;
 }
 
 .message {
-    font-size: 1rem;
+    font-size: 1.1rem;
     font-weight: 600;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     min-height: 1.2em;
     color: var(--text-secondary);
 }
@@ -278,8 +303,9 @@ input:focus { border-color: var(--primary-color); }
 .dice-container {
     display: flex;
     justify-content: center;
-    gap: 8px;
-    margin-bottom: 20px;
+    gap: 12px;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
 }
 
 .die-wrapper {
@@ -287,35 +313,28 @@ input:focus { border-color: var(--primary-color); }
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 0;
 }
 
 .die-arrow {
-    font-size: 14px;
+    font-size: 16px;
     color: var(--text-secondary);
     cursor: pointer;
     opacity: 0.3;
-    padding: 4px 10px;
+    padding: 8px 16px;
     user-select: none;
-    transition: opacity 0.2s;
 }
-.die-wrapper:hover .die-arrow, .die-arrow:active {
-    opacity: 1;
-    color: var(--primary-color);
-}
+.die-wrapper:hover .die-arrow, .die-arrow:active { opacity: 1; color: var(--primary-color); }
 
 .die {
     width: var(--die-size);
     height: var(--die-size);
     background: var(--die-bg);
     border-radius: 8px;
-    box-shadow: 0 3px 0 rgba(0,0,0,0.2);
+    box-shadow: 0 4px 0 rgba(0,0,0,0.2);
     display: grid;
     grid-template: repeat(3, 1fr) / repeat(3, 1fr);
     padding: 3px;
-    box-sizing: border-box;
     cursor: grab;
-    position: relative;
     touch-action: none;
 }
 .die.held {
@@ -329,28 +348,29 @@ input:focus { border-color: var(--primary-color); }
     border-radius: 50%;
     align-self: center;
     justify-self: center;
-    width: 7px;
-    height: 7px;
+    width: 8px;
+    height: 8px;
     visibility: hidden; 
 }
 
 /* Score Sheet */
 .table-container {
-    overflow-x: auto;
+    flex: 1; /* Grow to fill available space */
+    overflow: auto; /* Internal scroll */
     background: var(--surface-color);
     border-radius: var(--radius);
     box-shadow: inset 0 0 0 1px var(--border-color);
     scrollbar-width: thin;
+    min-height: 0; /* Crucial for flex scrolling */
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    min-width: 300px;
 }
 
 th, td {
-    padding: 10px 8px;
+    padding: 12px;
     text-align: center;
     border-bottom: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
@@ -366,7 +386,14 @@ th {
     font-size: 0.75rem;
 }
 
-/* Sticky First Column */
+/* Sticky First Column & Header */
+thead th {
+    position: sticky;
+    top: 0;
+    z-index: 4;
+    border-bottom: 2px solid var(--border-color);
+}
+
 th:first-child, td:first-child {
     position: sticky;
     left: 0;
@@ -376,32 +403,40 @@ th:first-child, td:first-child {
     border-right: 2px solid var(--border-color);
     font-weight: 600;
     color: var(--text-color);
-    min-width: 100px;
-    max-width: 120px;
+    min-width: 110px;
 }
-th:first-child { z-index: 3; background: var(--bg-color); }
+/* Corner cell */
+thead th:first-child {
+    z-index: 5;
+    background: var(--bg-color);
+}
 
 .score-cell { font-variant-numeric: tabular-nums; }
 .score-cell.active-turn { background: var(--active-turn-bg); color: var(--primary-color); font-weight: bold; box-shadow: inset 0 0 0 2px var(--accent-color); }
 
-/* Mobile (Folded / Slab) Tweaks */
-@media (max-width: 599px) {
-    body { padding: 5px; }
-    .container { padding: 10px; }
-    
-    .die { width: 44px; height: 44px; }
-    .die-arrow { padding: 2px 10px; font-size: 12px; }
-    
-    th, td { padding: 8px 4px; font-size: 13px; }
-    th:first-child, td:first-child { 
-        font-size: 13px; 
-        padding-left: 8px;
-        width: 90px;
-        min-width: unset;
+/* Mobile Portrait / Small Screens */
+@media (max-width: 767px) {
+    .container {
+        padding: 10px;
+        border-radius: 0; /* Full screen on mobile */
+        box-shadow: none;
     }
     
-    .game-controls-area { padding: 10px; margin-bottom: 0; }
-    .message { margin-bottom: 10px; font-size: 0.9rem; }
-    .dice-container { margin-bottom: 10px; gap: 6px; }
-    h1 { font-size: 1.2rem; }
+    body { padding: 0; }
+    
+    #gameScreen {
+        flex-direction: column;
+        overflow: hidden;
+    }
+    
+    .game-controls-area {
+        padding: 10px;
+    }
+    
+    .table-container {
+        border-radius: 8px;
+    }
+
+    .die { width: 42px; height: 42px; }
+    .die-arrow { padding: 4px 12px; }
 }
