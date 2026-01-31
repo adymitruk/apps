@@ -1,30 +1,4 @@
-// --- Theme Management ---
-const themeToggle = document.getElementById('themeToggle');
-
-function initTheme() {
-    const saved = localStorage.getItem('theme');
-    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-    
-    if (saved === 'dark' || (!saved && prefersDark)) {
-        document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-        document.documentElement.setAttribute('data-theme', 'light');
-    }
-}
-
-themeToggle.onclick = () => {
-    const current = document.documentElement.getAttribute('data-theme');
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
-};
-
-initTheme();
-
-
-// --- Game Logic ---
-
-const CATEGORIES = [
+const CATEGORIES_UPPER = [
     { key: 'ones', label: 'Ones' },
     { key: 'twos', label: 'Twos' },
     { key: 'threes', label: 'Threes' },
@@ -33,28 +7,34 @@ const CATEGORIES = [
     { key: 'sixes', label: 'Sixes' },
     { key: 'subtotal', label: 'Sum', type: 'calc' },
     { key: 'bonus', label: 'Bonus', type: 'calc' },
-    { key: 'upperTotal', label: 'Upper Total', type: 'calc', isHeader: true },
-    { key: 'threeOfAKind', label: 'Three of a Kind' },
-    { key: 'fourOfAKind', label: 'Four of a Kind' },
+    { key: 'upperTotal', label: 'Upper Total', type: 'calc', isHeader: true }
+];
+
+const CATEGORIES_LOWER = [
+    { key: 'threeOfAKind', label: '3 of a Kind' },
+    { key: 'fourOfAKind', label: '4 of a Kind' },
     { key: 'fullHouse', label: 'Full House' },
     { key: 'smallStraight', label: 'Sm. Straight' },
     { key: 'largeStraight', label: 'Lg. Straight' },
     { key: 'yahtzee', label: 'Yahtzee' },
     { key: 'chance', label: 'Chance' },
     { key: 'lowerTotal', label: 'Lower Total', type: 'calc' },
-    { key: 'grandTotal', label: 'GRAND TOTAL', type: 'calc', isHeader: true },
-    { key: 'seriesTotal', label: 'Series Total', type: 'calc', isHeader: true } // New Row
+    { key: 'grandTotal', label: 'GRAND TOTAL', type: 'calc', isHeader: true }
 ];
 
-const SCORABLE_CATS = CATEGORIES.filter(c => !c.type).map(c => c.key);
+// Combine for logic lookups, but render separately
+const ALL_CATS = [...CATEGORIES_UPPER, ...CATEGORIES_LOWER];
+const SCORABLE_CATS = ALL_CATS.filter(c => !c.type).map(c => c.key);
 
 let appState = {
-    players: [],
+    players: [], // { name: "Adam", games: [ { scores: {}, totals: {} } ] }
+    currentGameIndex: 0, 
     currentPlayerIndex: 0,
-    dice: [0, 0, 0, 0, 0], // 0 means uninitialized/empty, but for manual mode we might want default 1?
+    dice: [0, 0, 0, 0, 0],
     rollsLeft: 3,
     held: [false, false, false, false, false],
-    gameOver: false
+    gameOver: false,
+    viewingPlayerIndex: 0 // Which player card is currently shown
 };
 
 // --- DOM Elements ---
@@ -66,14 +46,17 @@ const playerNameInput = document.getElementById('playerNameInput');
 const turnIndicator = document.getElementById('turnIndicator');
 const diceContainer = document.getElementById('diceContainer');
 const rollBtn = document.getElementById('rollBtn');
-const scoreHeader = document.getElementById('headerRow');
-const scoreBody = document.getElementById('scoreBody');
 const gameOverControls = document.getElementById('gameOverControls');
 const msgEl = document.getElementById('message');
 
-// --- Helpers ---
+// New DOM Elements for Split Layout
+const playerTabsEl = document.getElementById('playerTabs');
+const tableUpperBody = document.getElementById('tableUpperBody');
+const tableLowerBody = document.getElementById('tableLowerBody');
+const tableUpperHead = document.getElementById('tableUpperHead');
+const tableLowerHead = document.getElementById('tableLowerHead');
 
-// 3x3 Dot Map
+// --- Helpers ---
 const DOT_MAP = {
     1: [4],
     2: [2, 6],
@@ -83,109 +66,73 @@ const DOT_MAP = {
     6: [0, 2, 3, 5, 6, 8]
 };
 
-// --- Input Handling (Drag/Arrows) ---
+// ... (Input/Dice handling code remains similar, updated to use appState) ...
+// [Retaining the manual input / drag logic from previous edit, just ensuring it maps to new state]
 let dragStartY = 0;
 let isDragging = false;
 let activeDieIndex = -1;
 
 function handlePointerDown(e, index) {
     if (appState.held[index] || appState.gameOver) return;
-    // Only allow drag if we have dice (or permit setting initial dice manually)
-    // If dice are 0 (start of turn), we allow setting them to 1 first? 
-    // Let's assume dice must have value > 0 to drag, or we init them.
-    
     isDragging = true;
     dragStartY = e.clientY;
     activeDieIndex = index;
-    
     e.target.setPointerCapture(e.pointerId);
 }
-
 function handlePointerMove(e) {
     if (!isDragging || activeDieIndex === -1) return;
-    
-    const deltaY = dragStartY - e.clientY; // Up is positive
-    const threshold = 30; // pixels to trigger change
-
-    if (Math.abs(deltaY) > threshold) {
-        const change = deltaY > 0 ? 1 : -1;
-        changeDieValue(activeDieIndex, change);
-        dragStartY = e.clientY; // Reset anchor
+    const deltaY = dragStartY - e.clientY;
+    if (Math.abs(deltaY) > 30) {
+        changeDieValue(activeDieIndex, deltaY > 0 ? 1 : -1);
+        dragStartY = e.clientY;
     }
 }
-
-function handlePointerUp(e) {
-    isDragging = false;
-    activeDieIndex = -1;
-}
+function handlePointerUp(e) { isDragging = false; activeDieIndex = -1; }
 
 function changeDieValue(index, delta) {
     if (appState.held[index] || appState.gameOver) return;
-    
     let newVal = (appState.dice[index] || 1) + delta;
-    if (newVal > 6) newVal = 1;
-    if (newVal < 1) newVal = 6;
-    
+    if (newVal > 6) newVal = 1; if (newVal < 1) newVal = 6;
     appState.dice[index] = newVal;
-    
-    // If we manually change dice, we are technically "using" the turn logic, 
-    // but the user wants to mirror IRL play. 
-    // We update the UI immediately.
     renderGame();
 }
 
 function renderDie(val, i, isHeld) {
     const wrapper = document.createElement('div');
     wrapper.className = 'die-wrapper';
-
-    // Up Arrow
+    
     const upBtn = document.createElement('div');
     upBtn.className = 'die-arrow arrow-up';
     upBtn.innerHTML = '▲';
     upBtn.onclick = (e) => { e.stopPropagation(); changeDieValue(i, 1); };
 
-    // Die
     const d = document.createElement('div');
     d.className = 'die' + (isHeld ? ' held' : '');
     d.onclick = () => toggleHold(i);
-    
-    // Pointer Events for Drag
     d.onpointerdown = (e) => handlePointerDown(e, i);
     d.onpointermove = handlePointerMove;
     d.onpointerup = handlePointerUp;
-    d.onpointercancel = handlePointerUp; // Safety
-    
-    // Create 9 dots
+    d.onpointercancel = handlePointerUp;
+
     for (let dotIdx = 0; dotIdx < 9; dotIdx++) {
         const dot = document.createElement('div');
         dot.className = 'dot';
-        if (val > 0 && DOT_MAP[val].includes(dotIdx)) {
-            dot.style.visibility = 'visible';
-        }
+        if (val > 0 && DOT_MAP[val].includes(dotIdx)) dot.style.visibility = 'visible';
         d.appendChild(dot);
     }
 
-    // Down Arrow
     const downBtn = document.createElement('div');
     downBtn.className = 'die-arrow arrow-down';
     downBtn.innerHTML = '▼';
     downBtn.onclick = (e) => { e.stopPropagation(); changeDieValue(i, -1); };
 
-    // If held or game over, hide arrows/disable drag visuals (optional, but requested behavior is 'frozen dice can't be changed')
     if (isHeld || appState.gameOver) {
-        upBtn.style.opacity = '0';
-        downBtn.style.opacity = '0';
-        upBtn.style.pointerEvents = 'none';
-        downBtn.style.pointerEvents = 'none';
+        upBtn.style.opacity = '0'; downBtn.style.opacity = '0';
+        upBtn.style.pointerEvents = 'none'; downBtn.style.pointerEvents = 'none';
         d.style.cursor = 'default';
-    } else {
-        d.style.touchAction = 'none'; // Prevent scroll while dragging die
-    }
+    } else { d.style.touchAction = 'none'; }
 
-    wrapper.appendChild(upBtn);
-    wrapper.appendChild(d);
-    wrapper.appendChild(downBtn);
-    
+    wrapper.appendChild(upBtn); wrapper.appendChild(d); wrapper.appendChild(downBtn);
     return wrapper;
 }
 
@@ -194,10 +141,7 @@ function renderDie(val, i, isHeld) {
 function calculateScore(category, dice) {
     const counts = {};
     let sum = 0;
-    dice.forEach(d => {
-        counts[d] = (counts[d] || 0) + 1;
-        sum += d;
-    });
+    dice.forEach(d => { counts[d] = (counts[d] || 0) + 1; sum += d; });
     const countsArr = Object.values(counts);
 
     switch (category) {
@@ -222,24 +166,25 @@ function calculateScore(category, dice) {
     }
 }
 
-function updatePlayerTotals(player) {
+function updateGameTotals(gameObj) {
+    const scores = gameObj.scores;
+    
+    // Upper
     let upper = 0;
     ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes'].forEach(c => {
-        if (player.scores[c] !== undefined) upper += player.scores[c];
+        if (scores[c] !== undefined) upper += scores[c];
     });
-    player.scores.subtotal = upper;
-    player.scores.bonus = upper >= 63 ? 35 : 0;
-    player.scores.upperTotal = upper + player.scores.bonus;
+    scores.subtotal = upper;
+    scores.bonus = upper >= 63 ? 35 : 0;
+    scores.upperTotal = upper + scores.bonus;
     
+    // Lower
     let lower = 0;
     ['threeOfAKind', 'fourOfAKind', 'fullHouse', 'smallStraight', 'largeStraight', 'yahtzee', 'chance'].forEach(c => {
-        if (player.scores[c] !== undefined) lower += player.scores[c];
+        if (scores[c] !== undefined) lower += scores[c];
     });
-    player.scores.lowerTotal = lower;
-    player.scores.grandTotal = player.scores.upperTotal + lower;
-    
-    // Series Total = Previous wins/accumulated + current Grand Total
-    player.scores.seriesTotal = (player.seriesBase || 0) + player.scores.grandTotal;
+    scores.lowerTotal = lower;
+    scores.grandTotal = scores.upperTotal + lower;
 }
 
 // --- Actions ---
@@ -247,8 +192,11 @@ function updatePlayerTotals(player) {
 function addPlayer() {
     const name = playerNameInput.value.trim();
     if (name) {
-        // seriesBase tracks locked-in scores from previous games
-        appState.players.push({ name, scores: {}, seriesBase: 0 });
+        // Init with one empty game
+        appState.players.push({ 
+            name, 
+            games: [{ scores: {} }] 
+        });
         playerNameInput.value = '';
         renderSetup();
     }
@@ -272,21 +220,21 @@ function renderSetup() {
 
 function startGame() {
     appState.currentPlayerIndex = 0;
+    appState.viewingPlayerIndex = 0;
+    appState.currentGameIndex = 0;
+    appState.gameOver = false;
     resetTurn();
     setupScreen.classList.add('hidden');
     gameScreen.classList.remove('hidden');
-    buildScoreTable();
     renderGame();
 }
 
 function quickStart() {
-    appState.players = [{ name: 'Player 1', scores: {}, seriesBase: 0 }];
+    appState.players = [{ name: 'Player 1', games: [{ scores: {} }] }];
     startGame();
 }
 
 function resetTurn() {
-    // If resetting turn, reset dice to 0? Or keep them? 
-    // Standard game: dice clear.
     appState.dice = [0, 0, 0, 0, 0];
     appState.rollsLeft = 3;
     appState.held = [false, false, false, false, false];
@@ -294,19 +242,14 @@ function resetTurn() {
 
 function roll() {
     if (appState.rollsLeft > 0 && !appState.gameOver) {
-        // Animate
         const diceEls = document.querySelectorAll('.die');
         diceEls.forEach(d => {
-            if (!d.classList.contains('held')) {
-                d.style.transform = `rotate(${Math.random() * 360}deg)`;
-            }
+            if (!d.classList.contains('held')) d.style.transform = `rotate(${Math.random() * 360}deg)`;
         });
 
         setTimeout(() => {
             for (let i = 0; i < 5; i++) {
-                if (!appState.held[i]) {
-                    appState.dice[i] = Math.ceil(Math.random() * 6);
-                }
+                if (!appState.held[i]) appState.dice[i] = Math.ceil(Math.random() * 6);
             }
             appState.rollsLeft--;
             renderGame();
@@ -321,49 +264,55 @@ function toggleHold(index) {
     }
 }
 
-function selectCategory(cat, playerIndex) {
+function selectCategory(cat) {
+    // Current player is the one whose turn it is. 
+    // We only allow scoring on their card.
+    // If the view is on another player, maybe jump to current?
     if (appState.gameOver) return;
-    if (playerIndex !== appState.currentPlayerIndex) return;
-    
-    // Allow scoring if dice are manually set even if rollsLeft == 3?
-    // User requirement: "game becomes a scoresheet". 
-    // So we should relax the "must roll" constraint if dice have values > 0.
+
+    // Check if dice have value
     const diceSum = appState.dice.reduce((a,b) => a+b, 0);
-    if (diceSum === 0) return; 
+    if (diceSum === 0) return;
 
-    const player = appState.players[playerIndex];
-    if (player.scores[cat] !== undefined) return;
+    // Get current player state
+    const player = appState.players[appState.currentPlayerIndex];
+    const game = player.games[appState.currentGameIndex];
 
-    player.scores[cat] = calculateScore(cat, appState.dice);
-    updatePlayerTotals(player);
+    if (game.scores[cat] !== undefined) return; // Already filled
 
-    const allFull = appState.players.every(p => 
-        SCORABLE_CATS.every(c => p.scores[c] !== undefined)
+    // Calculate & Store
+    game.scores[cat] = calculateScore(cat, appState.dice);
+    updateGameTotals(game);
+
+    // Check End of Game (All players filled current game)
+    const allPlayersDone = appState.players.every(p => 
+        SCORABLE_CATS.every(c => p.games[appState.currentGameIndex].scores[c] !== undefined)
     );
 
-    if (allFull) {
+    if (allPlayersDone) {
         appState.gameOver = true;
         renderGame();
     } else {
+        // Next Turn
         appState.currentPlayerIndex = (appState.currentPlayerIndex + 1) % appState.players.length;
+        // Auto-switch view to next player
+        appState.viewingPlayerIndex = appState.currentPlayerIndex;
+        
         resetTurn();
         renderGame();
     }
 }
 
 function playAgain() {
-    // Accumulate scores into seriesBase
+    // Start new game column
     appState.players.forEach(p => {
-        p.seriesBase = (p.seriesBase || 0) + (p.scores.grandTotal || 0);
-        p.scores = {};
-        // Init the new series total for display immediately
-        p.scores.seriesTotal = p.seriesBase;
+        p.games.push({ scores: {} });
     });
-    
+    appState.currentGameIndex++;
     appState.gameOver = false;
     appState.currentPlayerIndex = 0;
+    appState.viewingPlayerIndex = 0;
     resetTurn();
-    buildScoreTable();
     gameOverControls.classList.add('hidden');
     rollBtn.classList.remove('hidden'); 
     renderGame();
@@ -380,125 +329,118 @@ function newGroup() {
     renderSetup();
 }
 
+function setViewPlayer(idx) {
+    appState.viewingPlayerIndex = idx;
+    renderGame(); // Re-render table for this player
+}
+
 // --- Rendering ---
 
-function buildScoreTable() {
-    scoreHeader.innerHTML = '<th>Category</th>';
-    appState.players.forEach(p => {
-        const th = document.createElement('th');
-        th.textContent = p.name;
-        scoreHeader.appendChild(th);
+function renderTabs() {
+    playerTabsEl.innerHTML = '';
+    appState.players.forEach((p, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn' + (i === appState.viewingPlayerIndex ? ' active' : '');
+        // Marker for whose turn it is
+        const isTurn = (i === appState.currentPlayerIndex && !appState.gameOver);
+        btn.innerHTML = `${p.name} ${isTurn ? ' <span class="turn-dot">●</span>' : ''}`;
+        btn.onclick = () => setViewPlayer(i);
+        playerTabsEl.appendChild(btn);
     });
+}
 
-    scoreBody.innerHTML = '';
-    CATEGORIES.forEach(catDef => {
+function renderTableSection(catList, headEl, bodyEl) {
+    const viewingPlayer = appState.players[appState.viewingPlayerIndex];
+    if (!viewingPlayer) return;
+
+    // Header: Category | Game 1 | Game 2 ...
+    let htmlHead = '<tr><th>Category</th>';
+    viewingPlayer.games.forEach((g, i) => {
+        const isCurrent = (i === appState.currentGameIndex);
+        htmlHead += `<th class="${isCurrent ? 'current-game-col' : ''}">Game ${i+1}</th>`;
+    });
+    htmlHead += '</tr>';
+    headEl.innerHTML = htmlHead;
+
+    // Body
+    bodyEl.innerHTML = '';
+    catList.forEach(catDef => {
         const tr = document.createElement('tr');
         if (catDef.isHeader) tr.className = 'total-row';
 
         const tdLabel = document.createElement('td');
         tdLabel.textContent = catDef.label;
-        if (catDef.isHeader) tdLabel.style.fontWeight = '800';
+        if (catDef.type === 'calc') tdLabel.style.fontWeight = 'bold';
         tr.appendChild(tdLabel);
 
-        appState.players.forEach((p, pIdx) => {
+        viewingPlayer.games.forEach((g, gIdx) => {
             const td = document.createElement('td');
-            td.id = `cell-${pIdx}-${catDef.key}`;
+            const val = g.scores[catDef.key];
+            const isCurrentGame = (gIdx === appState.currentGameIndex);
             
-            if (!catDef.type) {
-                td.className = 'score-cell';
-                td.onclick = () => selectCategory(catDef.key, pIdx);
+            // Interaction: Only allow clicking if:
+            // 1. It is the Current Game Column
+            // 2. It is the Viewing Player's Turn
+            // 3. Not game over
+            const canInteract = isCurrentGame && 
+                                (appState.viewingPlayerIndex === appState.currentPlayerIndex) && 
+                                !appState.gameOver &&
+                                !catDef.type;
+
+            td.textContent = (val !== undefined) ? val : '';
+            if (catDef.type === 'calc') td.style.fontWeight = 'bold';
+
+            if (isCurrentGame) {
+                td.classList.add('current-game-cell');
+                if (canInteract && val === undefined) {
+                    td.classList.add('score-cell');
+                    td.classList.add('active-turn'); // Highlight potential move
+                    td.onclick = () => selectCategory(catDef.key);
+                }
             } else {
-                td.style.backgroundColor = 'var(--bg-color)';
-                td.style.cursor = 'default';
+                td.classList.add('history-cell');
             }
+            
             tr.appendChild(td);
         });
-        scoreBody.appendChild(tr);
+        bodyEl.appendChild(tr);
     });
 }
 
 function renderGame() {
-    // 1. Dice
+    // 1. Dice & Status
     diceContainer.innerHTML = '';
     appState.dice.forEach((val, i) => {
         diceContainer.appendChild(renderDie(val, i, appState.held[i]));
     });
 
-    // 2. Status
     const currentPlayer = appState.players[appState.currentPlayerIndex];
-    
     if (appState.gameOver) {
         turnIndicator.textContent = "GAME OVER";
         turnIndicator.style.background = "var(--accent-color)";
-        msgEl.textContent = "Check totals below!";
+        msgEl.textContent = "Check final scores.";
         rollBtn.classList.add('hidden'); 
         gameOverControls.classList.remove('hidden');
     } else {
         turnIndicator.textContent = `${currentPlayer.name}'s Turn`;
         turnIndicator.style.background = "var(--text-color)";
         
-        // Update message for flexibility
         if (appState.rollsLeft === 3 && appState.dice[0] === 0) msgEl.textContent = "Roll or set dice";
         else if (appState.rollsLeft === 0) msgEl.textContent = "Select category";
         else msgEl.textContent = `${appState.rollsLeft} rolls left`;
         
-        rollBtn.textContent = appState.rollsLeft === 0 ? "Score to continue" : "ROLL";
+        rollBtn.classList.remove('hidden');
+        gameOverControls.classList.add('hidden');
+        rollBtn.textContent = appState.rollsLeft === 0 ? "Score..." : "ROLL";
         rollBtn.disabled = appState.rollsLeft === 0;
     }
 
-    // 3. Highlight Columns
-    const headerCells = scoreHeader.querySelectorAll('th');
-    headerCells.forEach((th, i) => {
-        if (i === 0) return;
-        const pIdx = i - 1;
-        if (pIdx === appState.currentPlayerIndex && !appState.gameOver) {
-            th.classList.add('current-player-col');
-            th.style.color = 'var(--primary-color)';
-        } else {
-            th.classList.remove('current-player-col');
-            th.style.color = '';
-        }
-    });
+    // 2. Tabs
+    renderTabs();
 
-    // 4. Update Table
-    CATEGORIES.forEach(catDef => {
-        appState.players.forEach((p, pIdx) => {
-            const td = document.getElementById(`cell-${pIdx}-${catDef.key}`);
-            if (!td) return;
-
-            const val = p.scores[catDef.key];
-            const isMyTurn = (pIdx === appState.currentPlayerIndex) && !appState.gameOver;
-            
-            td.textContent = (val !== undefined) ? val : '';
-            if (catDef.type === 'calc') {
-                // If it's the new Series Total row, show seriesTotal property
-                if (catDef.key === 'seriesTotal') {
-                     // Default to seriesBase if current game score is 0/undefined
-                     const total = p.scores.seriesTotal !== undefined ? p.scores.seriesTotal : (p.seriesBase || 0);
-                     td.textContent = total;
-                }
-                td.style.fontWeight = 'bold';
-            }
-
-            if (isMyTurn && !appState.gameOver) {
-                 td.classList.add('current-player-col');
-            } else {
-                 td.classList.remove('current-player-col');
-            }
-
-            if (!catDef.type) {
-                if (val !== undefined) {
-                    td.classList.add('filled');
-                    td.classList.remove('active-turn');
-                } else if (isMyTurn) {
-                    // Always active if it's my turn, even if I haven't rolled yet (manual entry support)
-                     td.classList.add('active-turn');
-                } else {
-                    td.classList.remove('active-turn');
-                }
-            }
-        });
-    });
+    // 3. Score Tables (Split)
+    renderTableSection(CATEGORIES_UPPER, tableUpperHead, tableUpperBody);
+    renderTableSection(CATEGORIES_LOWER, tableLowerHead, tableLowerBody);
 }
 
 // --- Init ---
