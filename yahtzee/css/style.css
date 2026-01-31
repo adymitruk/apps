@@ -5,22 +5,69 @@ body {
     display: flex;
     justify-content: center;
     padding: 20px;
+    margin: 0;
 }
 
 .container {
     background: #fff;
     padding: 20px;
     border: 4px solid #333;
-    max-width: 600px;
     width: 100%;
+    max-width: 1200px; /* Wider for multiplayer table */
+    box-sizing: border-box;
 }
 
 h1 {
     text-align: center;
     border-bottom: 4px solid #333;
     margin-top: 0;
+    margin-bottom: 20px;
 }
 
+/* Screen Management */
+.screen {
+    display: block;
+}
+.screen.hidden {
+    display: none;
+}
+
+/* Setup Screen */
+.setup-controls {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-bottom: 20px;
+}
+input {
+    padding: 10px;
+    font-family: inherit;
+    font-size: 16px;
+    border: 2px solid #333;
+}
+.player-list {
+    list-style: none;
+    padding: 0;
+    text-align: center;
+    margin-bottom: 20px;
+}
+.player-list li {
+    background: #e0e0e0;
+    display: inline-block;
+    padding: 5px 10px;
+    margin: 5px;
+    border: 1px solid #333;
+}
+.setup-actions {
+    text-align: center;
+}
+.divider {
+    margin: 10px 0;
+    font-weight: bold;
+    color: #666;
+}
+
+/* Game Area */
 .game-area {
     text-align: center;
     margin-bottom: 20px;
@@ -29,11 +76,22 @@ h1 {
     border: 2px solid #333;
 }
 
+.turn-indicator {
+    font-size: 1.2em;
+    font-weight: bold;
+    margin-bottom: 10px;
+    background: #333;
+    color: #fff;
+    padding: 5px;
+    display: inline-block;
+}
+
 .dice-container {
     display: flex;
     justify-content: center;
     gap: 10px;
     margin: 20px 0;
+    flex-wrap: wrap; /* Wrap on tiny screens */
 }
 
 .die {
@@ -49,7 +107,6 @@ h1 {
     cursor: pointer;
     user-select: none;
 }
-
 .die.held {
     background: #333;
     color: #fff;
@@ -66,41 +123,123 @@ button {
     cursor: pointer;
     margin: 5px;
 }
+button:hover { background: #555; }
+button:disabled { background: #999; cursor: not-allowed; }
 
-button:hover {
+.reset-btn {
     background: #555;
 }
 
-button:disabled {
-    background: #999;
-    cursor: not-allowed;
+/* Score Sheet */
+.score-sheet-container {
+    margin-top: 20px;
 }
-
-.score-sheet table {
+.table-wrapper {
+    overflow-x: auto; /* Scroll if too many players */
+}
+table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 10px;
+    min-width: 300px;
 }
-
-.score-sheet th, .score-sheet td {
+th, td {
     border: 1px solid #333;
     padding: 8px;
-    text-align: left;
+    text-align: center; /* Center scores */
+}
+th:first-child, td:first-child {
+    text-align: left; /* Categories left-aligned */
+    position: sticky; /* Keep category visible on scroll */
+    left: 0;
+    background: #fff;
+    z-index: 1;
 }
 
-/* Hover effect only for rows that haven't been scored yet */
-.score-sheet tbody tr:not(.used):hover {
-    background: #ffffcc;
+/* Cell Interaction */
+.score-cell {
     cursor: pointer;
 }
-
-.score-sheet tr.used {
-    background: #ddd;
+.score-cell:hover {
+    background: #ffffcc;
+}
+.score-cell.active-turn:hover {
+    background: #ffff99; /* Stronger highlight for current player */
+}
+.score-cell.filled {
+    background: #f0f0f0;
     color: #666;
     cursor: default;
 }
+.score-cell.potential {
+    color: #999; /* Preview score? Optional enhancement */
+}
 
-.message {
-    font-weight: bold;
-    min-height: 24px;
+/* Highlight current player column */
+th.current-player, td.current-player {
+    background-color: #e6f7ff;
+}
+th:first-child.current-player, td:first-child.current-player {
+    background-color: #fff; /* Don't highlight sticky header background incorrectly */
+    box-shadow: inset 0 0 0 2px #333; /* Alternative indicator? or just ignore sticky col */
+}
+
+.game-over-controls {
+    text-align: center;
+    margin-top: 20px;
+    padding: 20px;
+    background: #dff0d8;
+    border: 2px solid #3c763d;
+}
+.game-over-controls.hidden {
+    display: none;
+}
+
+/* Responsive Layouts */
+
+/* Desktop/Tablet (Landscape) */
+@media (min-width: 768px) {
+    #gameScreen {
+        display: grid;
+        grid-template-columns: 1fr 1.5fr;
+        gap: 20px;
+        align-items: start;
+    }
+    .game-area {
+        margin-bottom: 0;
+    }
+    .score-sheet-container {
+        margin-top: 0;
+    }
+    .game-over-controls {
+        grid-column: 1 / -1;
+    }
+}
+
+/* Foldable/Square (approx aspect ratio check or width range) */
+@media (min-width: 500px) and (max-width: 767px) {
+    /* Stacked but maybe side-by-side elements inside? 
+       Actually, standard vertical stack works fine for square, 
+       just ensure width utilizes space. */
+    .container {
+        padding: 10px;
+    }
+    .die {
+        width: 60px;
+        height: 60px;
+    }
+}
+
+/* Slab Phone (Narrow) */
+@media (max-width: 499px) {
+    .container {
+        padding: 10px;
+        border-width: 2px;
+    }
+    h1 { font-size: 1.5em; }
+    .die {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+    th, td { padding: 4px; font-size: 14px; }
 }

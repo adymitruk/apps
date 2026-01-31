@@ -1,17 +1,51 @@
 const CATEGORIES = [
-    'ones', 'twos', 'threes', 'fours', 'fives', 'sixes',
-    'threeOfAKind', 'fourOfAKind', 'fullHouse', 'smallStraight', 'largeStraight', 'yahtzee', 'chance'
+    { key: 'ones', label: 'Ones' },
+    { key: 'twos', label: 'Twos' },
+    { key: 'threes', label: 'Threes' },
+    { key: 'fours', label: 'Fours' },
+    { key: 'fives', label: 'Fives' },
+    { key: 'sixes', label: 'Sixes' },
+    { key: 'subtotal', label: 'Sum', type: 'calc' },
+    { key: 'bonus', label: 'Bonus', type: 'calc' },
+    { key: 'upperTotal', label: 'Upper Total', type: 'calc' },
+    { key: 'threeOfAKind', label: 'Three of a Kind' },
+    { key: 'fourOfAKind', label: 'Four of a Kind' },
+    { key: 'fullHouse', label: 'Full House' },
+    { key: 'smallStraight', label: 'Small Straight' },
+    { key: 'largeStraight', label: 'Large Straight' },
+    { key: 'yahtzee', label: 'Yahtzee' },
+    { key: 'chance', label: 'Chance' },
+    { key: 'lowerTotal', label: 'Lower Total', type: 'calc' },
+    { key: 'grandTotal', label: 'GRAND TOTAL', type: 'calc' }
 ];
 
-let gameState = {
+const SCORABLE_CATS = CATEGORIES.filter(c => !c.type).map(c => c.key);
+
+let appState = {
+    players: [], // { name: "Adam", scores: { ones: 3, ... } }
+    currentPlayerIndex: 0,
     dice: [0, 0, 0, 0, 0],
     rollsLeft: 3,
     held: [false, false, false, false, false],
-    scores: {}, 
     gameOver: false
 };
 
-// --- Core Logic (Ported from Server) ---
+// --- DOM Elements ---
+const setupScreen = document.getElementById('setupScreen');
+const gameScreen = document.getElementById('gameScreen');
+const playerListEl = document.getElementById('playerList');
+const startGameBtn = document.getElementById('startGameBtn');
+const playerNameInput = document.getElementById('playerNameInput');
+const turnIndicator = document.getElementById('turnIndicator');
+const diceContainer = document.getElementById('diceContainer');
+const rollBtn = document.getElementById('rollBtn');
+const scoreHeader = document.getElementById('headerRow');
+const scoreBody = document.getElementById('scoreBody');
+const scoreFoot = document.getElementById('scoreFoot'); // Not used in this grid layout, simplified to body
+const gameOverControls = document.getElementById('gameOverControls');
+const msgEl = document.getElementById('message');
+
+// --- Logic ---
 
 function calculateScore(category, dice) {
     const counts = {};
@@ -44,136 +78,260 @@ function calculateScore(category, dice) {
     }
 }
 
-function getTotals() {
+function updatePlayerTotals(player) {
     let upper = 0;
     ['ones', 'twos', 'threes', 'fours', 'fives', 'sixes'].forEach(c => {
-        if (gameState.scores[c] !== undefined) upper += gameState.scores[c];
+        if (player.scores[c] !== undefined) upper += player.scores[c];
     });
-    const bonus = upper >= 63 ? 35 : 0;
+    player.scores.subtotal = upper;
+    player.scores.bonus = upper >= 63 ? 35 : 0;
+    player.scores.upperTotal = upper + player.scores.bonus;
     
     let lower = 0;
     ['threeOfAKind', 'fourOfAKind', 'fullHouse', 'smallStraight', 'largeStraight', 'yahtzee', 'chance'].forEach(c => {
-        if (gameState.scores[c] !== undefined) lower += gameState.scores[c];
+        if (player.scores[c] !== undefined) lower += player.scores[c];
     });
-    
-    return {
-        upper,
-        bonus,
-        lower,
-        grand: upper + bonus + lower
-    };
+    player.scores.lowerTotal = lower;
+    player.scores.grandTotal = player.scores.upperTotal + lower;
 }
 
-// --- UI Logic ---
+// --- Setup Actions ---
 
-function render() {
-    // Dice
-    const diceContainer = document.getElementById('diceContainer');
+function addPlayer() {
+    const name = playerNameInput.value.trim();
+    if (name) {
+        appState.players.push({ name, scores: {} });
+        playerNameInput.value = '';
+        renderSetup();
+    }
+}
+
+function renderSetup() {
+    playerListEl.innerHTML = '';
+    appState.players.forEach((p, i) => {
+        const li = document.createElement('li');
+        li.textContent = p.name;
+        playerListEl.appendChild(li);
+    });
+    startGameBtn.disabled = appState.players.length === 0;
+}
+
+function startGame() {
+    appState.currentPlayerIndex = 0;
+    resetTurn();
+    setupScreen.classList.add('hidden');
+    gameScreen.classList.remove('hidden');
+    buildScoreTable();
+    renderGame();
+}
+
+function quickStart() {
+    appState.players = [{ name: 'Player 1', scores: {} }];
+    startGame();
+}
+
+function resetTurn() {
+    appState.dice = [0, 0, 0, 0, 0];
+    appState.rollsLeft = 3;
+    appState.held = [false, false, false, false, false];
+    // Don't reset gameOver here, that's global
+}
+
+// --- Game Actions ---
+
+function roll() {
+    if (appState.rollsLeft > 0 && !appState.gameOver) {
+        for (let i = 0; i < 5; i++) {
+            if (!appState.held[i]) {
+                appState.dice[i] = Math.ceil(Math.random() * 6);
+            }
+        }
+        appState.rollsLeft--;
+        renderGame();
+    }
+}
+
+function toggleHold(index) {
+    if (appState.rollsLeft < 3 && !appState.gameOver) {
+        appState.held[index] = !appState.held[index];
+        renderGame();
+    }
+}
+
+function selectCategory(cat, playerIndex) {
+    // Validate: correct player, game running, dice rolled
+    if (appState.gameOver) return;
+    if (playerIndex !== appState.currentPlayerIndex) return;
+    if (appState.rollsLeft === 3 && appState.dice[0] === 0) return; // Haven't rolled yet
+
+    const player = appState.players[playerIndex];
+    if (player.scores[cat] !== undefined) return; // Already scored
+
+    // Score it
+    player.scores[cat] = calculateScore(cat, appState.dice);
+    updatePlayerTotals(player);
+
+    // Check End of Game (if all players full)
+    const allFull = appState.players.every(p => 
+        SCORABLE_CATS.every(c => p.scores[c] !== undefined)
+    );
+
+    if (allFull) {
+        appState.gameOver = true;
+        renderGame();
+    } else {
+        // Next Turn
+        appState.currentPlayerIndex = (appState.currentPlayerIndex + 1) % appState.players.length;
+        resetTurn();
+        renderGame();
+    }
+}
+
+function playAgain() {
+    // Reset scores, keep players
+    appState.players.forEach(p => p.scores = {});
+    appState.gameOver = false;
+    appState.currentPlayerIndex = 0;
+    resetTurn();
+    buildScoreTable(); // Clear visual scores
+    gameOverControls.classList.add('hidden');
+    renderGame();
+}
+
+function newGroup() {
+    appState.players = [];
+    appState.gameOver = false;
+    resetTurn();
+    gameScreen.classList.add('hidden');
+    setupScreen.classList.remove('hidden');
+    gameOverControls.classList.add('hidden');
+    renderSetup();
+}
+
+// --- Rendering ---
+
+function buildScoreTable() {
+    // Header
+    scoreHeader.innerHTML = '<th>Category</th>';
+    appState.players.forEach(p => {
+        const th = document.createElement('th');
+        th.textContent = p.name;
+        scoreHeader.appendChild(th);
+    });
+
+    // Body
+    scoreBody.innerHTML = '';
+    CATEGORIES.forEach(catDef => {
+        const tr = document.createElement('tr');
+        // Label
+        const tdLabel = document.createElement('td');
+        if (catDef.type === 'calc') tdLabel.innerHTML = `<strong>${catDef.label}</strong>`;
+        else tdLabel.textContent = catDef.label;
+        tr.appendChild(tdLabel);
+
+        // Player Columns
+        appState.players.forEach((p, pIdx) => {
+            const td = document.createElement('td');
+            td.id = `cell-${pIdx}-${catDef.key}`;
+            
+            if (!catDef.type) {
+                // Scorable cell
+                td.className = 'score-cell';
+                td.onclick = () => selectCategory(catDef.key, pIdx);
+            } else {
+                // Calculated cell
+                td.style.backgroundColor = '#f9f9f9';
+            }
+            tr.appendChild(td);
+        });
+        scoreBody.appendChild(tr);
+    });
+}
+
+function renderGame() {
+    // 1. Dice
     diceContainer.innerHTML = '';
-    gameState.dice.forEach((val, i) => {
+    appState.dice.forEach((val, i) => {
         const d = document.createElement('div');
-        d.className = 'die' + (gameState.held[i] ? ' held' : '');
+        d.className = 'die' + (appState.held[i] ? ' held' : '');
         d.textContent = val || '-';
         d.onclick = () => toggleHold(i);
         diceContainer.appendChild(d);
     });
 
-    // Message & Button
-    const msgEl = document.getElementById('message');
-    const rollBtn = document.getElementById('rollBtn');
+    // 2. Status / Message
+    const currentPlayer = appState.players[appState.currentPlayerIndex];
     
-    if (gameState.gameOver) {
-        msgEl.textContent = "Game Over!";
-        rollBtn.textContent = "ROLL";
+    if (appState.gameOver) {
+        turnIndicator.textContent = "GAME OVER";
+        msgEl.textContent = "Check totals below!";
+        rollBtn.textContent = "DONE";
         rollBtn.disabled = true;
+        gameOverControls.classList.remove('hidden');
     } else {
-        if (gameState.rollsLeft === 3) msgEl.textContent = "Roll the dice to start!";
-        else if (gameState.rollsLeft === 0) msgEl.textContent = "Select a category to score.";
-        else msgEl.textContent = "Roll again or select a category.";
+        turnIndicator.textContent = `Current Turn: ${currentPlayer.name}`;
         
-        rollBtn.textContent = `ROLL (${gameState.rollsLeft} left)`;
-        rollBtn.disabled = gameState.rollsLeft === 0;
+        if (appState.rollsLeft === 3) msgEl.textContent = "Roll the dice!";
+        else if (appState.rollsLeft === 0) msgEl.textContent = "Select a category.";
+        else msgEl.textContent = "Roll again or select category.";
+        
+        rollBtn.textContent = `ROLL (${appState.rollsLeft})`;
+        rollBtn.disabled = appState.rollsLeft === 0;
     }
 
-    // Scores
-    const rows = document.querySelectorAll('#scoreTable tr');
-    rows.forEach(row => {
-        const cat = row.getAttribute('data-cat');
-        const scoreVal = row.querySelector('.score-val');
-        
-        if (gameState.scores[cat] !== undefined) {
-            scoreVal.textContent = gameState.scores[cat];
-            row.classList.add('used');
-            row.onclick = null;
-        } else {
-            scoreVal.textContent = '';
-            row.classList.remove('used');
-            row.onclick = () => selectCategory(cat);
-        }
+    // 3. Highlight active column
+    const headerCells = scoreHeader.querySelectorAll('th');
+    headerCells.forEach((th, i) => {
+        // i=0 is Label, i=1 is Player 0
+        if (i === 0) return;
+        const pIdx = i - 1;
+        if (pIdx === appState.currentPlayerIndex && !appState.gameOver) th.classList.add('current-player');
+        else th.classList.remove('current-player');
     });
 
-    // Totals
-    const t = getTotals();
-    document.getElementById('upperTotal').textContent = t.upper;
-    document.getElementById('bonus').textContent = t.bonus;
-    document.getElementById('lowerTotal').textContent = t.lower;
-    document.getElementById('grandTotal').innerHTML = `<strong>${t.grand}</strong>`;
-}
+    // 4. Update Cells
+    CATEGORIES.forEach(catDef => {
+        appState.players.forEach((p, pIdx) => {
+            const td = document.getElementById(`cell-${pIdx}-${catDef.key}`);
+            if (!td) return;
 
-// --- Actions ---
+            const val = p.scores[catDef.key];
+            const isMyTurn = (pIdx === appState.currentPlayerIndex) && !appState.gameOver;
+            
+            // Render Value
+            td.innerHTML = (val !== undefined) ? val : '';
+            if (catDef.type === 'calc' && val !== undefined) td.innerHTML = `<strong>${val}</strong>`;
 
-function roll() {
-    if (gameState.rollsLeft > 0 && !gameState.gameOver) {
-        for (let i = 0; i < 5; i++) {
-            if (!gameState.held[i]) {
-                gameState.dice[i] = Math.ceil(Math.random() * 6);
+            // Classes
+            if (isMyTurn) td.classList.add('current-player');
+            else td.classList.remove('current-player');
+
+            if (!catDef.type) {
+                if (val !== undefined) {
+                    td.classList.add('filled');
+                    td.classList.remove('active-turn');
+                } else if (isMyTurn && appState.rollsLeft < 3) {
+                    // It is my turn, I have rolled, and this is empty
+                    td.classList.add('active-turn');
+                } else {
+                    td.classList.remove('active-turn');
+                }
             }
-        }
-        gameState.rollsLeft--;
-        render();
-    }
+        });
+    });
 }
 
-function toggleHold(index) {
-    if (gameState.rollsLeft < 3 && !gameState.gameOver) {
-        gameState.held[index] = !gameState.held[index];
-        render();
-    }
-}
-
-function selectCategory(cat) {
-    // Only allow scoring if rolled at least once
-    if (gameState.rollsLeft === 3 && gameState.dice[0] === 0) return;
-
-    if (gameState.scores[cat] === undefined && !gameState.gameOver) {
-        gameState.scores[cat] = calculateScore(cat, gameState.dice);
-        
-        // Check game over
-        if (Object.keys(gameState.scores).length === CATEGORIES.length) {
-            gameState.gameOver = true;
-        } else {
-            // Reset for next turn
-            gameState.rollsLeft = 3;
-            gameState.dice = [0,0,0,0,0];
-            gameState.held = [false, false, false, false, false];
-        }
-        render();
-    }
-}
-
-function reset() {
-    gameState = {
-        dice: [0, 0, 0, 0, 0],
-        rollsLeft: 3,
-        held: [false, false, false, false, false],
-        scores: {},
-        gameOver: false
-    };
-    render();
-}
-
-// --- Init ---
+// --- Event Listeners ---
+document.getElementById('addPlayerBtn').onclick = addPlayer;
+playerNameInput.addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') addPlayer();
+});
+startGameBtn.onclick = startGame;
+document.getElementById('quickStartBtn').onclick = quickStart;
 
 document.getElementById('rollBtn').onclick = roll;
-document.getElementById('resetBtn').onclick = reset;
-render();
+document.getElementById('playAgainBtn').onclick = playAgain;
+document.getElementById('newGroupBtn').onclick = newGroup;
+
+// Init
+renderSetup();
