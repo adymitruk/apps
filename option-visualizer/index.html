@@ -2,9 +2,738 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Welcome to option-visualizer</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Options Visualizer</title>
+    
+    <!-- Fallback styling to prevent white flashes -->
+    <style>
+        body { background-color: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; margin: 0; }
+        #root { display: flex; justify-content: center; width: 100%; }
+        .custom-date-input::-webkit-calendar-picker-indicator { filter: invert(1); opacity: 0.6; cursor: pointer; }
+        .custom-date-input::-webkit-calendar-picker-indicator:hover { opacity: 1; }
+    </style>
+
+    <!-- Tailwind CSS (JIT via CDN) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- React & ReactDOM (Reliable CDNJS links) -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    
+    <!-- Prop Types & Recharts -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/prop-types/15.8.1/prop-types.min.js"></script>
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.0/Recharts.js"></script>
+    
+    <!-- Babel standalone for in-browser JSX compilation -->
+    <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.6/babel.min.js"></script>
 </head>
-<body>
-    <h1>option-visualizer is running!</h1>
+<body class="bg-slate-950">
+    <!-- The React app will mount here -->
+    <div id="root">
+        <div style="margin-top: 100px; text-align: center;">
+            <div style="width: 40px; height: 40px; border: 4px solid #334155; border-top-color: #3b82f6; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 20px auto;"></div>
+            <h2 style="font-size: 1.5rem; font-weight: bold; color: #e2e8f0; margin-bottom: 8px;">Loading Visualizer...</h2>
+            <p style="color: #94a3b8; font-size: 0.875rem;">Compiling application in browser</p>
+            <style>@keyframes spin { to { transform: rotate(360deg); } }</style>
+        </div>
+    </div>
+
+    <!-- Application Code -->
+    <script type="text/babel">
+        // --- Error Boundary to catch React crashes ---
+        class ErrorBoundary extends React.Component {
+            constructor(props) {
+                super(props);
+                this.state = { hasError: false, error: null };
+            }
+            static getDerivedStateFromError(error) {
+                return { hasError: true, error };
+            }
+            render() {
+                if (this.state.hasError) {
+                    return (
+                        <div style={{ padding: '2rem', color: '#f87171', backgroundColor: '#450a0a', border: '1px solid #7f1d1d', borderRadius: '8px', margin: '2rem', maxWidth: '800px' }}>
+                            <h1 style={{ fontSize: '1.5rem', fontWeight: 'bold', marginBottom: '1rem' }}>Application Error</h1>
+                            <p style={{ marginBottom: '1rem' }}>Something went wrong while rendering the app. This is usually caused by a missing library or syntax error.</p>
+                            <pre style={{ backgroundColor: '#2e1012', padding: '1rem', borderRadius: '4px', overflowX: 'auto', fontSize: '0.875rem' }}>{this.state.error.toString()}</pre>
+                        </div>
+                    );
+                }
+                return this.props.children;
+            }
+        }
+
+        const { useState, useEffect, useMemo } = React;
+        const { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ReferenceLine, ReferenceDot, ResponsiveContainer } = window.Recharts || {};
+
+        if (!window.Recharts) {
+            document.getElementById('root').innerHTML = '<div style="color:#f87171; padding: 2rem; text-align:center;">Failed to load Recharts charting library. Please check your internet connection.</div>';
+            throw new Error("Recharts Library missing");
+        }
+
+        // --- Inline SVG Icons ---
+        const Plus = ({ size = 24, className = "" }) => (<svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>);
+        const Trash2 = ({ size = 24, className = "" }) => (<svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>);
+        const LinkIcon = ({ size = 24, className = "" }) => (<svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>);
+        const Settings2 = ({ size = 24, className = "" }) => (<svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 7h-9"/><path d="M14 17H5"/><circle cx="17" cy="7" r="3"/><circle cx="8" cy="17" r="3"/></svg>);
+        const TrendingUp = ({ size = 24, className = "" }) => (<svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>);
+        const Sparkles = ({ size = 24, className = "" }) => (<svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>);
+
+        // --- Black-Scholes Math Functions ---
+        const standardNormalCDF = (x) => {
+            const t = 1 / (1 + 0.2316419 * Math.abs(x));
+            const d = 0.3989423 * Math.exp(-x * x / 2);
+            const prob = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+            return x > 0 ? 1 - prob : prob;
+        };
+
+        const blackScholes = (S, K, T, r, v, type) => {
+            if (T <= 0) return type === 'C' ? Math.max(0, S - K) : Math.max(0, K - S);
+            
+            const effectiveV = Math.max(0.01, v);
+            const S_eff = Math.max(0.01, S);
+            
+            const d1 = (Math.log(S_eff / K) + (r + effectiveV * effectiveV / 2) * T) / (effectiveV * Math.sqrt(T));
+            const d2 = d1 - effectiveV * Math.sqrt(T);
+            
+            if (type === 'C') {
+                return S_eff * standardNormalCDF(d1) - K * Math.exp(-r * T) * standardNormalCDF(d2);
+            } else {
+                return K * Math.exp(-r * T) * standardNormalCDF(-d2) - S_eff * standardNormalCDF(-d1);
+            }
+        };
+
+        // --- URL Codecs ---
+        const encodeLegs = (legs) => {
+            return legs.map(l => `${l.qty}*${l.type}*${l.strike}*${l.expiry}*${l.entry}`).join(',');
+        };
+
+        const decodeLegs = (str) => {
+            try {
+                return str.split(',').map(s => {
+                    const [qty, type, strike, expiry, entry] = s.split('*');
+                    return {
+                        id: Math.random().toString(36).substr(2, 9),
+                        qty: parseInt(qty, 10),
+                        type,
+                        strike: parseFloat(strike),
+                        expiry,
+                        entry: parseFloat(entry)
+                    };
+                });
+            } catch (e) {
+                return null;
+            }
+        };
+
+        // --- Default Trade (Flyagonal) ---
+        const DEFAULT_LEGS = [
+            { id: '1', qty: 10, type: 'C', strike: 157.5, expiry: '2026-03-13', entry: 1.25 },
+            { id: '2', qty: -20, type: 'C', strike: 165, expiry: '2026-03-13', entry: 0.35 },
+            { id: '3', qty: 10, type: 'C', strike: 172.5, expiry: '2026-03-13', entry: 0.05 },
+            { id: '4', qty: 10, type: 'C', strike: 135, expiry: '2026-03-20', entry: 16.50 },
+            { id: '5', qty: -10, type: 'C', strike: 137, expiry: '2026-03-13', entry: 14.80 }
+        ];
+
+        // --- Custom Tooltip ---
+        const CustomTooltip = ({ active, payload, label, timePct }) => {
+            if (active && payload && payload.length) {
+                return (
+                    <div className="bg-slate-900 border border-slate-700 p-3 rounded-lg shadow-xl text-sm z-50 relative">
+                        <p className="text-slate-300 font-bold mb-2 pb-2 border-b border-slate-700/50">{`ORCL: $${Number(label).toFixed(2)}`}</p>
+                        {payload.map((entry, index) => (
+                            <div key={index} className="flex items-center justify-between gap-6 py-1">
+                                <span style={{ color: entry.color }} className="font-medium">
+                                    {entry.dataKey === 'pnlExpiry' ? 'At Expiry' : (timePct > 0 ? 'Simulated' : 'Today')}
+                                </span>
+                                <span className={`font-bold ${entry.value >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                    ${entry.value > 0 ? '+' : ''}{entry.value.toLocaleString()}
+                                </span>
+                            </div>
+                        ))}
+                    </div>
+                );
+            }
+            return null;
+        };
+
+        // --- Custom Floating Label ---
+        const PnLLabel = (props) => {
+            const { x, y, customValue, color, position } = props;
+            
+            if (typeof x !== 'number' || typeof y !== 'number' || isNaN(x) || isNaN(y)) {
+                return null;
+            }
+
+            const isLeft = position === 'left';
+            const w = 120;
+            const h = 30;
+            const xPos = isLeft ? x - w - 12 : x + 12;
+            const yPos = y - h / 2;
+
+            return (
+                <foreignObject x={xPos} y={yPos} width={w} height={h}>
+                    <div xmlns="http://www.w3.org/1999/xhtml" className={`w-full h-full flex items-center ${isLeft ? 'justify-end' : 'justify-start'}`}>
+                        <span 
+                            className="px-2 py-1 rounded shadow-md text-[11px] font-bold tracking-wide transition-all"
+                            style={{ 
+                                backgroundColor: '#0f172a',
+                                border: `1px solid ${color}80`, 
+                                color: color 
+                            }}
+                        >
+                            {customValue}
+                        </span>
+                    </div>
+                </foreignObject>
+            );
+        };
+
+        const formatDate = (date) => date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+
+        function App() {
+            const [symbol, setSymbol] = useState('ORCL');
+            const [currentPrice, setCurrentPrice] = useState(149.50);
+            const [iv, setIv] = useState(30);
+            const [legs, setLegs] = useState(DEFAULT_LEGS);
+            const [copied, setCopied] = useState(false);
+            
+            const [timePercentage, setTimePercentage] = useState(0);
+            const [volMultiplier, setVolMultiplier] = useState(1);
+            const [hoveredPrice, setHoveredPrice] = useState(null);
+            const [autoIvEnabled, setAutoIvEnabled] = useState(true);
+
+            // Parse URL on mount
+            useEffect(() => {
+                const params = new URLSearchParams(window.location.search);
+                if (params.get('legs')) setLegs(decodeLegs(params.get('legs')) || DEFAULT_LEGS);
+                if (params.get('symbol')) setSymbol(params.get('symbol'));
+                if (params.get('p')) setCurrentPrice(parseFloat(params.get('p')));
+                if (params.get('iv')) setIv(parseFloat(params.get('iv')));
+                if (params.get('timePct')) setTimePercentage(parseInt(params.get('timePct')));
+                if (params.get('volMult')) setVolMultiplier(parseFloat(params.get('volMult')));
+            }, []);
+
+            // Sync state to URL automatically
+            useEffect(() => {
+                const params = new URLSearchParams();
+                params.set('symbol', symbol);
+                params.set('p', currentPrice.toString());
+                params.set('iv', iv.toString());
+                params.set('legs', encodeLegs(legs));
+                params.set('timePct', timePercentage.toString());
+                params.set('volMult', volMultiplier.toString());
+                
+                try {
+                    window.history.replaceState(null, '', `?${params.toString()}`);
+                } catch (e) {
+                    // Safe failure for iframe rendering
+                }
+            }, [symbol, currentPrice, iv, legs, timePercentage, volMultiplier]);
+
+            const handleShare = () => {
+                try {
+                    const url = window.location.href;
+                    const el = document.createElement('textarea');
+                    el.value = url;
+                    document.body.appendChild(el);
+                    el.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(el);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 2000);
+                } catch (e) {
+                    console.error("Failed to copy link:", e);
+                }
+            };
+
+            const addLeg = () => {
+                setLegs([...legs, {
+                    id: Math.random().toString(36).substr(2, 9),
+                    qty: 1,
+                    type: 'C',
+                    strike: currentPrice,
+                    expiry: '2026-03-13',
+                    entry: 1.00
+                }]);
+            };
+
+            const removeLeg = (id) => setLegs(legs.filter(l => l.id !== id));
+            
+            const updateLeg = (id, field, value) => {
+                setLegs(legs.map(l => l.id === id ? { ...l, [field]: value } : l));
+            };
+
+            // --- Dynamic Volatility Math (Auto-IV on Hover) ---
+            const displayVolMultiplier = useMemo(() => {
+                if (hoveredPrice === null || !autoIvEnabled) return volMultiplier;
+                
+                const safeCurrent = Math.max(0.01, currentPrice);
+                const priceDiffPct = (hoveredPrice - safeCurrent) / safeCurrent;
+                
+                const timeElapsed = timePercentage / 100;
+                const sensitivity = -4.5 * (1 - timeElapsed) - 0.5;
+                const impact = priceDiffPct * sensitivity;
+                
+                return Math.min(3.0, Math.max(0.1, volMultiplier + impact));
+            }, [hoveredPrice, currentPrice, timePercentage, volMultiplier, autoIvEnabled]);
+
+            // --- Date Calculations ---
+            const { baseToday, earliestExpiry, simulatedToday } = useMemo(() => {
+                if (legs.length === 0) return { baseToday: new Date(), earliestExpiry: new Date(), simulatedToday: new Date() };
+                const expDates = legs.map(l => new Date(`${l.expiry}T16:00:00Z`).getTime());
+                const earliest = new Date(Math.min(...expDates));
+                const realToday = new Date();
+                const base = realToday > earliest 
+                    ? new Date(earliest.getTime() - (7 * 24 * 3600 * 1000)) 
+                    : realToday;
+                const sim = new Date(base.getTime() + (earliest.getTime() - base.getTime()) * (timePercentage / 100));
+                return { baseToday: base, earliestExpiry: earliest, simulatedToday: sim };
+            }, [legs, timePercentage]);
+
+            // --- Graph & Math Generation ---
+            const chartData = useMemo(() => {
+                if (legs.length === 0) return [];
+                
+                const strikes = legs.map(l => l.strike);
+                const minStrike = Math.min(...strikes, currentPrice);
+                const maxStrike = Math.max(...strikes, currentPrice);
+                const padding = (maxStrike - minStrike) * 0.3 || currentPrice * 0.2;
+                
+                const minX = Math.max(0, minStrike - padding);
+                const maxX = maxStrike + padding;
+                const step = (maxX - minX) / 100;
+
+                const data = [];
+                const r = 0.05; 
+                const baseVol = iv / 100;
+                const effectiveVol = baseVol * displayVolMultiplier; 
+
+                for (let S = minX; S <= maxX; S += step) {
+                    let pnlAtExpiry = 0;
+                    let pnlToday = 0;
+
+                    legs.forEach(leg => {
+                        const legDate = new Date(`${leg.expiry}T16:00:00Z`);
+                        const entryCost = leg.entry;
+                        const multiplier = leg.qty * 100;
+
+                        const tExpiry = Math.max(0, (legDate.getTime() - earliestExpiry.getTime()) / (1000 * 3600 * 24 * 365));
+                        const valExpiry = blackScholes(S, leg.strike, tExpiry, r, effectiveVol, leg.type);
+                        pnlAtExpiry += multiplier * (valExpiry - entryCost);
+
+                        const tToday = Math.max(0, (legDate.getTime() - simulatedToday.getTime()) / (1000 * 3600 * 24 * 365));
+                        const valToday = blackScholes(S, leg.strike, tToday, r, effectiveVol, leg.type);
+                        pnlToday += multiplier * (valToday - entryCost);
+                    });
+
+                    data.push({
+                        price: S,
+                        pnlExpiry: Math.round(pnlAtExpiry),
+                        pnlToday: Math.round(pnlToday)
+                    });
+                }
+                return data;
+            }, [legs, currentPrice, iv, earliestExpiry, simulatedToday, displayVolMultiplier]);
+
+            const currentPnL = useMemo(() => {
+                if (legs.length === 0) return { today: 0, expiry: 0 };
+                
+                let pnlAtExpiry = 0;
+                let pnlToday = 0;
+                const r = 0.05;
+                const baseVol = iv / 100;
+                const effectiveVol = baseVol * displayVolMultiplier;
+
+                legs.forEach(leg => {
+                    const legDate = new Date(`${leg.expiry}T16:00:00Z`);
+                    const entryCost = leg.entry;
+                    const multiplier = leg.qty * 100;
+
+                    const tExpiry = Math.max(0, (legDate.getTime() - earliestExpiry.getTime()) / (1000 * 3600 * 24 * 365));
+                    const valExpiry = blackScholes(currentPrice, leg.strike, tExpiry, r, effectiveVol, leg.type);
+                    pnlAtExpiry += multiplier * (valExpiry - entryCost);
+
+                    const tToday = Math.max(0, (legDate.getTime() - simulatedToday.getTime()) / (1000 * 3600 * 24 * 365));
+                    const valToday = blackScholes(currentPrice, leg.strike, tToday, r, effectiveVol, leg.type);
+                    pnlToday += multiplier * (valToday - entryCost);
+                });
+
+                return {
+                    today: Math.round(pnlToday),
+                    expiry: Math.round(pnlAtExpiry)
+                };
+            }, [legs, currentPrice, iv, earliestExpiry, simulatedToday, displayVolMultiplier]);
+
+            const formatPnL = (val) => val === 0 ? '$0' : `${val > 0 ? '+' : '-'}$${Math.abs(val).toLocaleString()}`;
+            const netCost = legs.reduce((acc, leg) => acc + (leg.qty * leg.entry * 100), 0);
+
+            return (
+                <div className="w-full min-h-screen bg-slate-950 text-slate-200 p-4 font-sans selection:bg-blue-500/30">
+                    <div className="max-w-6xl mx-auto space-y-4">
+                        
+                        {/* Header Area */}
+                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-blue-600/20 text-blue-400 rounded-lg">
+                                    <TrendingUp size={24} />
+                                </div>
+                                <div>
+                                    <h1 className="text-xl font-bold text-white tracking-tight">Options Visualizer</h1>
+                                    <p className="text-xs text-slate-400">Multi-Expiry Black-Scholes Pricer</p>
+                                </div>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-4 items-center">
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm text-slate-400">Symbol</label>
+                                    <input 
+                                        type="text" 
+                                        value={symbol} 
+                                        onChange={(e) => setSymbol(e.target.value.toUpperCase())}
+                                        className="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm font-bold text-white uppercase focus:outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm text-slate-400">Price ($)</label>
+                                    <input 
+                                        type="number" 
+                                        value={currentPrice} 
+                                        onChange={(e) => setCurrentPrice(parseFloat(e.target.value) || 0)}
+                                        className="w-24 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm font-bold text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <label className="text-sm text-slate-400">Flat IV (%)</label>
+                                    <input 
+                                        type="number" 
+                                        value={iv} 
+                                        onChange={(e) => setIv(parseFloat(e.target.value) || 0)}
+                                        className="w-20 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-sm text-white focus:outline-none focus:border-blue-500 transition-colors"
+                                    />
+                                </div>
+                                <button 
+                                    onClick={handleShare}
+                                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-500 text-white px-4 py-1.5 rounded-lg text-sm font-medium transition-colors"
+                                >
+                                    <LinkIcon size={16} />
+                                    {copied ? 'Copied!' : 'Copy Link'}
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Main Content Grid */}
+                        <div className="grid lg:grid-cols-3 gap-4">
+                            
+                            {/* Chart Section */}
+                            <div className="lg:col-span-2 bg-slate-900 border border-slate-800 p-4 rounded-xl shadow-lg relative min-h-[400px]">
+                                <div className="absolute top-4 left-6 z-10 w-full pr-12">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <div className="flex gap-4">
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full bg-[#10b981]"></div>
+                                                <span className="text-slate-300">At Expiry</span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-3 h-3 rounded-full bg-[#3b82f6]"></div>
+                                                <span className="text-slate-300">{timePercentage > 0 ? 'Simulated' : 'Today'}</span>
+                                            </div>
+                                        </div>
+                                        
+                                        {hoveredPrice !== null && autoIvEnabled && (
+                                            <div className="flex items-center gap-1.5 px-3 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full text-xs font-bold animate-pulse">
+                                                <Sparkles size={12} />
+                                                Simulating IV Impact
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-8">
+                                    <ResponsiveContainer width="100%" height={380}>
+                                        <LineChart 
+                                            data={chartData} 
+                                            margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
+                                            onMouseMove={(e) => {
+                                                if (e && e.activeLabel !== undefined) {
+                                                    setHoveredPrice(Number(e.activeLabel));
+                                                }
+                                            }}
+                                            onMouseLeave={() => setHoveredPrice(null)}
+                                        >
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+                                            <XAxis 
+                                                dataKey="price" 
+                                                stroke="#64748b" 
+                                                tickFormatter={(val) => `$${val.toFixed(0)}`}
+                                                domain={['dataMin', 'dataMax']}
+                                                type="number"
+                                                tick={{ fill: '#64748b', fontSize: 12 }}
+                                            />
+                                            <YAxis 
+                                                stroke="#64748b" 
+                                                tickFormatter={(val) => `$${val}`}
+                                                tick={{ fill: '#64748b', fontSize: 12 }}
+                                                width={60}
+                                            />
+                                            <Tooltip content={<CustomTooltip timePct={timePercentage} />} />
+                                            <ReferenceLine y={0} stroke="#334155" strokeWidth={2} />
+                                            <ReferenceLine 
+                                                x={currentPrice} 
+                                                stroke="#8b5cf6" 
+                                                strokeDasharray="4 4" 
+                                                label={{ value: 'Current Price', position: 'top', fill: '#8b5cf6', fontSize: 12 }} 
+                                            />
+                                            <ReferenceDot 
+                                                x={currentPrice} 
+                                                y={currentPnL.today} 
+                                                r={4} 
+                                                fill="#0f172a" 
+                                                stroke="#3b82f6"
+                                                strokeWidth={2}
+                                                label={<PnLLabel customValue={formatPnL(currentPnL.today)} color="#3b82f6" position="left" />} 
+                                            />
+                                            <ReferenceDot 
+                                                x={currentPrice} 
+                                                y={currentPnL.expiry} 
+                                                r={4} 
+                                                fill="#0f172a" 
+                                                stroke="#10b981"
+                                                strokeWidth={2}
+                                                label={<PnLLabel customValue={formatPnL(currentPnL.expiry)} color="#10b981" position="right" />} 
+                                            />
+                                            <Line type="monotone" dataKey="pnlToday" stroke="#3b82f6" strokeWidth={2} dot={false} isAnimationActive={false} />
+                                            <Line type="monotone" dataKey="pnlExpiry" stroke="#10b981" strokeWidth={2.5} dot={false} isAnimationActive={false} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+
+                                {/* Dynamic Sliders Area */}
+                                <div className="mt-6 border-t border-slate-800 pt-6 grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    
+                                    {/* Time Slider */}
+                                    <div>
+                                        <div className="flex justify-between items-end mb-2">
+                                            <label className="text-sm font-bold text-slate-300">
+                                                Time to Expiry
+                                            </label>
+                                            <span className="text-xs text-blue-400 font-medium bg-blue-500/10 px-2 py-1 rounded">
+                                                {formatDate(simulatedToday)}
+                                            </span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            min="0" 
+                                            max="100" 
+                                            value={timePercentage} 
+                                            onChange={(e) => setTimePercentage(parseInt(e.target.value))}
+                                            className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                                        />
+                                        <div className="flex justify-between text-xs text-slate-500 mt-2">
+                                            <span>{formatDate(baseToday)}</span>
+                                            <span>{formatDate(earliestExpiry)}</span>
+                                        </div>
+                                    </div>
+
+                                    {/* Volatility Slider */}
+                                    <div>
+                                        <div className="flex justify-between items-end mb-2">
+                                            <label className="text-sm font-bold text-slate-300 flex items-center gap-2">
+                                                IV Multiplier
+                                                <button
+                                                    onClick={() => setAutoIvEnabled(!autoIvEnabled)}
+                                                    className={`text-[10px] font-normal uppercase tracking-wider px-1.5 py-0.5 rounded border transition-colors ${
+                                                        autoIvEnabled
+                                                            ? 'bg-purple-500/10 text-purple-400 border-purple-500/30 hover:bg-purple-500/20'
+                                                            : 'bg-slate-800 text-slate-500 border-slate-700 hover:bg-slate-700 hover:text-slate-300'
+                                                    }`}
+                                                    title="Toggle automatic IV adjustment on hover"
+                                                >
+                                                    Auto {autoIvEnabled ? 'ON' : 'OFF'}
+                                                </button>
+                                            </label>
+                                            <span className={`text-xs font-medium px-2 py-1 rounded transition-colors ${hoveredPrice !== null && autoIvEnabled ? 'bg-purple-600 text-white shadow-[0_0_10px_rgba(147,51,234,0.5)]' : 'text-purple-400 bg-purple-500/10'}`}>
+                                                {(displayVolMultiplier * 100).toFixed(0)}%
+                                            </span>
+                                        </div>
+                                        <input 
+                                            type="range" 
+                                            min="10" 
+                                            max="300" 
+                                            value={displayVolMultiplier * 100} 
+                                            onChange={(e) => {
+                                                setVolMultiplier(parseInt(e.target.value) / 100);
+                                                setAutoIvEnabled(false);
+                                                if (hoveredPrice !== null) setHoveredPrice(null);
+                                            }}
+                                            className={`w-full h-2 rounded-lg appearance-none cursor-pointer transition-colors ${hoveredPrice !== null && autoIvEnabled ? 'bg-purple-900/50 accent-purple-400' : 'bg-slate-800 accent-purple-500'}`}
+                                        />
+                                        <div className="flex justify-between text-xs text-slate-500 mt-2">
+                                            <span>10%</span>
+                                            <span>Base IV ({iv}%)</span>
+                                            <span>300%</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Sidebar / Summary */}
+                            <div className="bg-slate-900 border border-slate-800 p-5 rounded-xl shadow-lg flex flex-col h-full">
+                                <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                                    <Settings2 size={20} className="text-slate-400" />
+                                    Strategy Summary
+                                </h2>
+                                
+                                <div className="space-y-4 flex-grow">
+                                    <div className="bg-slate-800/50 p-4 rounded-lg border border-slate-700/50">
+                                        <div className="text-sm text-slate-400 mb-1">Net Entry Cost</div>
+                                        <div className={`text-2xl font-bold ${netCost > 0 ? 'text-rose-400' : 'text-emerald-400'}`}>
+                                            {netCost > 0 ? 'Debit ' : 'Credit '}
+                                            ${Math.abs(netCost).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                        </div>
+                                    </div>
+
+                                    <div className="text-sm text-slate-400 leading-relaxed mt-4">
+                                        <p className="mb-2">
+                                            <strong className="text-slate-200">The "Flyagonal":</strong> This strategy merges a Bull Call Diagonal with an Out-of-the-Money Butterfly. 
+                                        </p>
+                                        <p>
+                                            The back-month long option (Mar 20) retains extrinsic value at the front-month expiration (Mar 13), creating a dynamic payoff profile that requires the Black-Scholes model to visualize properly.
+                                        </p>
+                                    </div>
+                                </div>
+                                
+                                <div className="mt-6 pt-4 border-t border-slate-800 text-xs text-slate-500 text-center">
+                                    Estimates based on standard Black-Scholes. Does not account for early assignment or volatility skew.
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Legs Builder */}
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl shadow-lg overflow-hidden">
+                            <div className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-800/20">
+                                <h2 className="text-lg font-bold text-white">Strategy Legs</h2>
+                                <button 
+                                    onClick={addLeg}
+                                    className="flex items-center gap-1 bg-slate-800 hover:bg-slate-700 text-white px-3 py-1.5 rounded text-sm transition-colors border border-slate-600"
+                                >
+                                    <Plus size={16} /> Add Leg
+                                </button>
+                            </div>
+                            
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-sm whitespace-nowrap">
+                                    <thead className="bg-slate-900/50 text-slate-400">
+                                        <tr>
+                                            <th className="p-4 font-medium">B/S</th>
+                                            <th className="p-4 font-medium">Qty</th>
+                                            <th className="p-4 font-medium">Expiry</th>
+                                            <th className="p-4 font-medium">Strike</th>
+                                            <th className="p-4 font-medium">Type</th>
+                                            <th className="p-4 font-medium">Entry Price</th>
+                                            <th className="p-4 font-medium text-right"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-800/50">
+                                        {legs.map(leg => (
+                                            <tr key={leg.id} className="hover:bg-slate-800/20 transition-colors">
+                                                <td className="p-4">
+                                                    <span className={`px-2.5 py-1 rounded text-xs font-bold ${leg.qty > 0 ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-rose-500/10 text-rose-400 border border-rose-500/20'}`}>
+                                                        {leg.qty > 0 ? 'BUY' : 'SELL'}
+                                                    </span>
+                                                </td>
+                                                <td className="p-4">
+                                                    <input 
+                                                        type="number" 
+                                                        value={Math.abs(leg.qty)} 
+                                                        onChange={(e) => updateLeg(leg.id, 'qty', (parseInt(e.target.value) || 0) * (leg.qty > 0 ? 1 : -1))}
+                                                        className="w-16 bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white focus:outline-none focus:border-blue-500"
+                                                    />
+                                                    <button 
+                                                        onClick={() => updateLeg(leg.id, 'qty', leg.qty * -1)}
+                                                        className="ml-2 text-xs text-slate-400 hover:text-white underline"
+                                                    >
+                                                        Flip
+                                                    </button>
+                                                </td>
+                                                <td className="p-4">
+                                                    <input 
+                                                        type="date" 
+                                                        value={leg.expiry} 
+                                                        onChange={(e) => updateLeg(leg.id, 'expiry', e.target.value)}
+                                                        className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white focus:outline-none focus:border-blue-500 custom-date-input"
+                                                    />
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="relative">
+                                                        <span className="absolute left-2 top-1.5 text-slate-500">$</span>
+                                                        <input 
+                                                            type="number" 
+                                                            step="0.5"
+                                                            value={leg.strike} 
+                                                            onChange={(e) => updateLeg(leg.id, 'strike', parseFloat(e.target.value) || 0)}
+                                                            className="w-24 pl-6 pr-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white focus:outline-none focus:border-blue-500"
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="p-4">
+                                                    <select 
+                                                        value={leg.type} 
+                                                        onChange={(e) => updateLeg(leg.id, 'type', e.target.value)}
+                                                        className="bg-slate-800 border border-slate-700 rounded px-2 py-1.5 text-white focus:outline-none focus:border-blue-500"
+                                                    >
+                                                        <option value="C">Call</option>
+                                                        <option value="P">Put</option>
+                                                    </select>
+                                                </td>
+                                                <td className="p-4">
+                                                    <div className="relative">
+                                                        <span className="absolute left-2 top-1.5 text-slate-500">$</span>
+                                                        <input 
+                                                            type="number" 
+                                                            step="0.05"
+                                                            value={leg.entry} 
+                                                            onChange={(e) => updateLeg(leg.id, 'entry', parseFloat(e.target.value) || 0)}
+                                                            className="w-24 pl-6 pr-2 py-1.5 bg-slate-800 border border-slate-700 rounded text-white focus:outline-none focus:border-blue-500"
+                                                        />
+                                                    </div>
+                                                </td>
+                                                <td className="p-4 text-right">
+                                                    <button 
+                                                        onClick={() => removeLeg(leg.id)}
+                                                        className="text-slate-500 hover:text-rose-400 p-1.5 rounded-lg hover:bg-rose-500/10 transition-colors"
+                                                        title="Remove Leg"
+                                                    >
+                                                        <Trash2 size={18} />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                        {legs.length === 0 && (
+                                            <tr>
+                                                <td colSpan="7" className="p-8 text-center text-slate-500">
+                                                    No legs added. Click "Add Leg" to start building a strategy.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        
+                    </div>
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(
+            <ErrorBoundary>
+                <App />
+            </ErrorBoundary>
+        );
+    </script>
 </body>
 </html>
+
+
