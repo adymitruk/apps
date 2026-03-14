@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Dymitruk Apps</title>
+    <script src="https://kit.fontawesome.com/dd99b654f8.js" crossorigin="anonymous"></script>
     <style>
         :root {
             --bg: #0f172a;
@@ -12,6 +13,7 @@
             --text-muted: #94a3b8;
             --accent: #38bdf8;
             --accent-hover: #0ea5e9;
+            --github: #6e7681;
         }
 
         body {
@@ -66,6 +68,7 @@
             display: flex;
             flex-direction: column;
             align-items: flex-start;
+            position: relative;
         }
 
         .card:hover {
@@ -84,6 +87,7 @@
             color: var(--text-muted);
             margin-top: 0.5rem;
             line-height: 1.5;
+            margin-bottom: 1.5rem;
         }
 
         .status {
@@ -96,6 +100,20 @@
             border-radius: 4px;
             margin-bottom: 1rem;
             font-weight: 600;
+        }
+
+        .github-link {
+            position: absolute;
+            bottom: 1.5rem;
+            right: 1.5rem;
+            color: var(--github);
+            font-size: 1.25rem;
+            transition: color 0.2s;
+            z-index: 10;
+        }
+
+        .github-link:hover {
+            color: var(--text-main);
         }
 
         footer {
@@ -114,29 +132,60 @@
     </header>
 
     <main class="grid">
-        <a href="/option-visualizer" class="card">
-            <span class="status">Live</span>
-            <h2>Option Visualizer</h2>
-            <p>Black-Scholes pricer for multi-expiry options strategies.</p>
-        </a>
+        <div class="card-wrapper" style="position: relative;">
+            <a href="/option-visualizer" class="card">
+                <span class="status">Live</span>
+                <h2>Option Visualizer</h2>
+                <p>Black-Scholes pricer for multi-expiry options strategies.</p>
+            </a>
+            <a href="https://github.com/adymitruk/option-visualizer" target="_blank" class="github-link" title="View Source on GitHub">
+                <i class="fab fa-github"></i>
+            </a>
+        </div>
 
-        <a href="/teleprompter" class="card">
-            <span class="status">Live</span>
-            <h2>Teleprompter</h2>
-            <p>Mirror-capable teleprompter for smooth scrolling scripts.</p>
-        </a>
+        <div class="card-wrapper" style="position: relative;">
+            <a href="/teleprompter" class="card">
+                <span class="status">Live</span>
+                <h2>Teleprompter</h2>
+                <p>Mirror-capable teleprompter for smooth scrolling scripts.</p>
+            </a>
+            <a href="https://github.com/adymitruk/teleprompter" target="_blank" class="github-link" title="View Source on GitHub">
+                <i class="fab fa-github"></i>
+            </a>
+        </div>
 
-        <a href="/yahtzee" class="card">
-            <span class="status">Coming Soon</span>
-            <h2>Yahtzee</h2>
-            <p>Dice rolling probability. Roll five dice and score points in this classic.</p>
-        </a>
+        <div class="card-wrapper" style="position: relative;">
+            <a href="/wordle" class="card">
+                <span class="status">Live</span>
+                <h2>Wordle</h2>
+                <p>A daily word puzzle clone. Guess the 5-letter word in six tries.</p>
+            </a>
+            <a href="https://github.com/adymitruk/wordle-clone" target="_blank" class="github-link" title="View Source on GitHub">
+                <i class="fab fa-github"></i>
+            </a>
+        </div>
 
-        <a href="/gin-rummy" class="card">
-            <span class="status">Coming Soon</span>
-            <h2>Gin Rummy</h2>
-            <p>Classic card game logic. Sort your melds and knock before your opponent does.</p>
-        </a>
+        <div class="card-wrapper" style="position: relative;">
+            <a href="/yahtzee" class="card">
+                <span class="status">Coming Soon</span>
+                <h2>Yahtzee</h2>
+                <p>Dice rolling probability. Roll five dice and score points in this classic.</p>
+            </a>
+            <a href="https://github.com/adymitruk/yahtzee" target="_blank" class="github-link" title="View Source on GitHub">
+                <i class="fab fa-github"></i>
+            </a>
+        </div>
+
+        <div class="card-wrapper" style="position: relative;">
+            <a href="/eventmodeling" class="card">
+                <span class="status">POC</span>
+                <h2>Event Modeling Tool</h2>
+                <p>Experimental board for designing systems using Event Modeling.</p>
+            </a>
+            <a href="https://github.com/event-modeling/eventmodeling.org" target="_blank" class="github-link" title="View Source on GitHub">
+                <i class="fab fa-github"></i>
+            </a>
+        </div>
     </main>
 
     <footer>
