@@ -2,9 +2,330 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Welcome to teleprompter</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teleprompter</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #000;
+            color: #fff;
+        }
+        #teleprompter {
+            width: 80%;
+            height: 60vh;
+            overflow: hidden;
+            position: relative;
+            border: 1px solid #333;
+            padding: 20px;
+            font-size: 48px;
+            line-height: 1.5;
+        }
+        #content {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            transition: top 0.5s;
+        }
+        #progress-bar {
+            width: 80%;
+            height: 10px;
+            background-color: #333;
+            margin-top: 20px;
+        }
+        #progress {
+            width: 0;
+            height: 100%;
+            background-color: #4CAF50;
+            transition: width 0.5s;
+        }
+        #controls {
+            margin-top: 20px;
+        }
+        .mirror-h {
+            transform: scaleX(-1);
+        }
+        .mirror-v {
+            transform: scaleY(-1);
+        }
+        .mirror-hv {
+            transform: scale(-1, -1);
+        }
+    </style>
 </head>
 <body>
-    <h1>teleprompter is running!</h1>
+    <div id="teleprompter">
+        <div id="content" contenteditable="false"></div>
+    </div>
+    <div id="progress-bar">
+        <div id="progress"></div>
+    </div>
+    <div id="controls">
+        <button id="editToggle">Edit Mode</button>
+        <button id="play">Play (Space)</button>
+        <button id="speedUp">Speed Up (↑)</button>
+        <button id="slowDown">Slow Down (↓)</button>
+        <button id="mirrorH">Mirror Horizontal (H)</button>
+        <button id="mirrorV">Mirror Vertical (V)</button>
+        <button id="fontIncrease">Increase Font (+)</button>
+        <button id="fontDecrease">Decrease Font (-)</button>
+        <button id="pageUp">Page Up (PgUp)</button>
+        <button id="pageDown">Page Down (PgDn)</button>
+        <button id="scrollToTop">Scroll to Top (Home)</button>
+        <button id="scrollToBottom">Scroll to Bottom (End)</button>
+    </div>
+
+    <script>
+        const teleprompter = document.getElementById('teleprompter');
+        const content = document.getElementById('content');
+        const progress = document.getElementById('progress');
+        const editToggle = document.getElementById('editToggle');
+        const playButton = document.getElementById('play');
+        const mirrorHButton = document.getElementById('mirrorH');
+        const mirrorVButton = document.getElementById('mirrorV');
+        const fontIncreaseButton = document.getElementById('fontIncrease');
+        const fontDecreaseButton = document.getElementById('fontDecrease');
+        const pageUpButton = document.getElementById('pageUp');
+        const pageDownButton = document.getElementById('pageDown');
+        const scrollToTopButton = document.getElementById('scrollToTop');
+        const scrollToBottomButton = document.getElementById('scrollToBottom');
+
+        const allButtons = document.querySelectorAll('#controls button:not(#editToggle)');
+
+        let isPlaying = false;
+        let scrollSpeed = 50; // pixels per second
+        let lastTimestamp = 0;
+        let fontSize = 48;
+        let isEditMode = false;
+
+        content.innerHTML = `
+            <p>Welcome to the enhanced teleprompter. This text is much longer to demonstrate scrolling across multiple screens.</p>
+            <p>Click 'Edit Mode' to edit this text. Use arrow keys to navigate. Press Space to play/pause.</p>
+            <p>You can now mirror the text horizontally with 'H' and vertically with 'V'.</p>
+            <p>Use '+' and '-' to increase and decrease font size. Use Page Up and Page Down for quick navigation.</p>
+            <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.</p>
+            <p>Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.</p>
+            <p>Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur.</p>
+            <p>Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.</p>
+            <p>This is the end of the default text. Feel free to edit and expand it as needed.</p>
+        `;
+
+        function toggleEdit() {
+            if (isPlaying) {
+                play(); // This will pause the playback
+            }
+            isEditMode = !isEditMode;
+            content.contentEditable = isEditMode;
+            editToggle.textContent = isEditMode ? "Reading Mode" : "Edit Mode";
+            
+            // Disable/enable other buttons
+            allButtons.forEach(button => {
+                button.disabled = isEditMode;
+            });
+
+            if (isEditMode) {
+                // Place cursor at the beginning of the text
+                const range = document.createRange();
+                const sel = window.getSelection();
+                range.setStart(content.firstChild, 0);
+                range.collapse(true);
+                sel.removeAllRanges();
+                sel.addRange(range);
+                
+                // Focus on the content
+                content.focus();
+            } else {
+                // Remove this line to keep the scroll position
+                // content.style.top = "0px";
+                updateProgress();
+            }
+        }
+
+        function play() {
+            isPlaying = !isPlaying;
+            playButton.textContent = isPlaying ? "Pause (Space)" : "Play (Space)";
+            if (isPlaying) {
+                requestAnimationFrame(scroll);
+            }
+        }
+
+        function scroll(timestamp) {
+            if (!lastTimestamp) lastTimestamp = timestamp;
+            const delta = timestamp - lastTimestamp;
+            lastTimestamp = timestamp;
+
+            if (isPlaying) {
+                const totalHeight = content.offsetHeight - teleprompter.offsetHeight;
+                const currentPosition = Math.abs(parseFloat(content.style.top || 0));
+                const newPosition = Math.min(totalHeight, Math.max(0, currentPosition + scrollSpeed * delta / 1000));
+                content.style.top = `-${newPosition}px`;
+                updateProgress();
+                requestAnimationFrame(scroll);
+            }
+        }
+
+        function updateProgress() {
+            const totalHeight = content.offsetHeight - teleprompter.offsetHeight;
+            const currentPosition = Math.abs(parseFloat(content.style.top || 0));
+            const percentage = (currentPosition / totalHeight) * 100;
+            progress.style.width = `${Math.min(percentage, 100)}%`;
+        }
+
+        function adjustSpeed(delta) {
+            scrollSpeed = Math.max(10, Math.min(200, scrollSpeed + delta));
+        }
+
+        function toggleMirror(direction) {
+            teleprompter.classList.toggle(`mirror-${direction}`);
+            if (teleprompter.classList.contains('mirror-h') && teleprompter.classList.contains('mirror-v')) {
+                teleprompter.classList.remove('mirror-h', 'mirror-v');
+                teleprompter.classList.add('mirror-hv');
+            } else if (teleprompter.classList.contains('mirror-hv')) {
+                if (direction === 'h') {
+                    teleprompter.classList.remove('mirror-hv');
+                    teleprompter.classList.add('mirror-v');
+                } else {
+                    teleprompter.classList.remove('mirror-hv');
+                    teleprompter.classList.add('mirror-h');
+                }
+            }
+        }
+
+        function changeFontSize(delta) {
+            fontSize = Math.max(12, Math.min(72, fontSize + delta));
+            teleprompter.style.fontSize = `${fontSize}px`;
+        }
+
+        function pageUpDown(direction) {
+            const pageHeight = teleprompter.offsetHeight;
+            const totalHeight = content.offsetHeight - teleprompter.offsetHeight;
+            const currentTop = parseFloat(content.style.top || 0);
+            const newTop = Math.min(0, Math.max(-totalHeight, currentTop + pageHeight * direction));
+            content.style.top = `${newTop}px`;
+            updateProgress();
+        }
+
+        function scrollToTop() {
+            content.style.top = '0px';
+            updateProgress();
+        }
+
+        function scrollToBottom() {
+            const totalHeight = content.offsetHeight - teleprompter.offsetHeight;
+            content.style.top = `-${totalHeight}px`;
+            updateProgress();
+        }
+
+        // Add this function to prevent space from activating buttons
+        function preventSpaceActivation(e) {
+            if (e.key === ' ' || e.key === 'Spacebar') {
+                e.preventDefault();
+            }
+        }
+
+        // Add event listeners to all buttons
+        document.querySelectorAll('button').forEach(button => {
+            button.addEventListener('keydown', preventSpaceActivation);
+        });
+
+        document.addEventListener('keydown', (e) => {
+            if (!isEditMode) {
+                switch (e.key) {
+                    case ' ':
+                        play();
+                        break;
+                    case 'ArrowUp':
+                        adjustSpeed(10);
+                        break;
+                    case 'ArrowDown':
+                        adjustSpeed(-10);
+                        break;
+                    case 'ArrowLeft':
+                        content.style.top = `${parseFloat(content.style.top || 0) + 100}px`;
+                        updateProgress();
+                        break;
+                    case 'ArrowRight':
+                        content.style.top = `${parseFloat(content.style.top || 0) - 100}px`;
+                        updateProgress();
+                        break;
+                    case 'h':
+                    case 'H':
+                        toggleMirror('h');
+                        break;
+                    case 'v':
+                    case 'V':
+                        toggleMirror('v');
+                        break;
+                    case '+':
+                        changeFontSize(2);
+                        break;
+                    case '-':
+                        changeFontSize(-2);
+                        break;
+                    case 'PageUp':
+                        pageUpDown(1);
+                        break;
+                    case 'PageDown':
+                        pageUpDown(-1);
+                        break;
+                    case 'Home':
+                        scrollToTop();
+                        break;
+                    case 'End':
+                        scrollToBottom();
+                        break;
+                    case 'e':
+                    case 'E':
+                        e.preventDefault(); // Prevent 'e' from being typed
+                        toggleEdit();
+                        break;
+                }
+            } else if (e.key === 'Escape') {
+                toggleEdit();
+            }
+        });
+
+        editToggle.addEventListener('click', (e) => {
+            e.preventDefault(); // Prevent any default action
+            toggleEdit();
+        });
+        playButton.addEventListener('click', play);
+        document.getElementById('speedUp').addEventListener('click', () => adjustSpeed(10));
+        document.getElementById('slowDown').addEventListener('click', () => adjustSpeed(-10));
+        mirrorHButton.addEventListener('click', () => toggleMirror('h'));
+        mirrorVButton.addEventListener('click', () => toggleMirror('v'));
+        fontIncreaseButton.addEventListener('click', () => changeFontSize(2));
+        fontDecreaseButton.addEventListener('click', () => changeFontSize(-2));
+        pageUpButton.addEventListener('click', () => pageUpDown(1));
+        pageDownButton.addEventListener('click', () => pageUpDown(-1));
+        scrollToTopButton.addEventListener('click', scrollToTop);
+        scrollToBottomButton.addEventListener('click', scrollToBottom);
+
+        // Add this new event listener for the Escape key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isEditMode) {
+                toggleEdit();
+            }
+        });
+
+        // Add this new event listener for the mouse wheel
+        teleprompter.addEventListener('wheel', (e) => {
+            e.preventDefault(); // Prevent default scrolling
+            const delta = e.deltaY > 0 ? -50 : 50; // Adjust scroll amount as needed
+            const currentTop = parseFloat(content.style.top || 0);
+            const totalHeight = content.offsetHeight - teleprompter.offsetHeight;
+            const newTop = Math.min(0, Math.max(-totalHeight, currentTop + delta));
+            content.style.top = `${newTop}px`;
+            updateProgress();
+        }, { passive: false });
+    </script>
 </body>
 </html>
+
+
